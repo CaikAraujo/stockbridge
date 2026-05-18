@@ -71,6 +71,8 @@ export const users = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     // email opcional — drivers podem entrar só com PIN. Unique parcial (Postgres trata NULLs como distintos por padrão).
     email: text('email').unique(),
+    emailVerified: timestamp('email_verified', { withTimezone: true }),
+    image: text('image'),
     phone: text('phone'),
     name: text('name').notNull(),
     role: userRoleEnum('role').notNull().default('driver'),
@@ -441,11 +443,11 @@ export const auditLog = pgTable(
 export const sessions = pgTable(
   'sessions',
   {
-    id: text('id').primaryKey(),
+    sessionToken: text('session_token').primaryKey(),
     userId: uuid('user_id')
       .references(() => users.id)
       .notNull(),
-    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    expires: timestamp('expires', { withTimezone: true }).notNull(),
     ip: text('ip'),
     userAgent: text('user_agent'),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }).defaultNow().notNull(),
@@ -453,7 +455,7 @@ export const sessions = pgTable(
   },
   (t) => ({
     userIdx: index('sessions_user_idx').on(t.userId),
-    expiresIdx: index('sessions_expires_idx').on(t.expiresAt),
+    expiresIdx: index('sessions_expires_idx').on(t.expires),
   }),
 );
 
@@ -478,6 +480,46 @@ export const idempotencyKeys = pgTable(
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.endpoint, t.key] }),
     expiresIdx: index('idempotency_expires_idx').on(t.expiresAt),
+  }),
+);
+
+// ============================================================
+// AUTH.JS REQUIRED TABLES
+// ============================================================
+
+export const accounts = pgTable(
+  'accounts',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    provider: text('provider').notNull(),
+    providerAccountId: text('provider_account_id').notNull(),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: text('token_type'),
+    scope: text('scope'),
+    id_token: text('id_token'),
+    session_state: text('session_state'),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.provider, t.providerAccountId] }),
+    userIdx: index('accounts_user_idx').on(t.userId),
+  }),
+);
+
+export const verificationTokens = pgTable(
+  'verification_tokens',
+  {
+    identifier: text('identifier').notNull(),
+    token: text('token').notNull(),
+    expires: timestamp('expires', { withTimezone: true }).notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.identifier, t.token] }),
+    expiresIdx: index('verification_tokens_expires_idx').on(t.expires),
   }),
 );
 
