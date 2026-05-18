@@ -1,0 +1,12 @@
+---
+description: Painel admin — desktop only
+globs: app/(admin)/**/*.tsx, components/admin/**/*.tsx
+---
+- Layout desktop-only. Use `min-w-[1024px]` no root. Mostre aviso amigável em telas menores.
+- Use shadcn/ui Data Tables para listagens com filtro, sort, pagination, export CSV.
+- Filtros padrão: data range, location, user, article, movement type.
+- Toda tabela de movimentações mostra colunas: data/hora, tipo, artigo, quantidade, location, usuário (createdBy), motivo.
+- Saldo por caminhão: card por location tipo 'truck' com motorista atribuído e total de SKUs/unidades.
+- Forms usam React Hook Form + Zod resolver com schemas de `lib/schemas/`.
+- Charts: Recharts. Sem libs pesadas.
+- Atalhos de teclado: `/` para focar busca, `n` para nova entrada, `Esc` para fechar modal.

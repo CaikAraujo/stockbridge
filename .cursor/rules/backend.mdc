@@ -1,0 +1,13 @@
+---
+description: tRPC routers, services, middleware
+globs: server/**/*.ts, app/api/**/*.ts
+---
+- Toda procedure declara role: `adminProcedure`, `managerProcedure`, `driverProcedure`, `publicProcedure`.
+- `publicProcedure` proibido para mutations.
+- Input sempre `.input(zodSchema)`. Sem exceção.
+- Mutations sempre aceitam `idempotencyKey: z.string().uuid()`. Middleware verifica antes de executar.
+- Errors com `TRPCError` tipado: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `INTERNAL_SERVER_ERROR`.
+- Business logic em `services/`, não em routers. Routers só orquestram.
+- Toda mutation registra audit log via middleware.
+- `stock_movements` é append-only. Nunca UPDATE/DELETE.
+- Transferência gera 2 movements com mesmo `transferId`.

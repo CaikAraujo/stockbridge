@@ -1,0 +1,12 @@
+---
+description: PWA do motorista — mobile only, offline-first
+globs: app/(driver)/**/*.tsx, lib/offline/**/*.ts, components/driver/**/*.tsx
+---
+- Layout mobile-only. Viewport máx 640px.
+- Toda ação otimista: UI atualiza imediatamente, sync em background.
+- Toda mutation gera `idempotencyKey` local (UUID v4) antes de tocar IndexedDB.
+- Fila offline em Dexie tabela `pending_mutations`.
+- Indicador de status online/offline + contador de fila sempre visível no header.
+- Botões grandes (mínimo 48px de altura), targets tocáveis. Sem hover-only.
+- Scanner de barcode em rota dedicada com câmera fullscreen.
+- Auth via magic link. PIN soft de 4 dígitos para confirmar ações sensíveis.

@@ -1,0 +1,10 @@
+---
+description: Regras para schema, migrations, Zod
+globs: db/**/*.ts, lib/schemas/**/*.ts
+---
+- Source of truth do schema: `db/schema.ts`. Tudo deriva dele.
+- Toda mudança gera migration nova via `pnpm db:generate`. Nunca edite migration aplicada.
+- Todo Zod schema vive em `lib/schemas/`. Reutilizável client + server.
+- Use `createInsertSchema` e `createSelectSchema` do `drizzle-zod` quando aplicável.
+- Naming: tabelas plural snake_case no SQL, camelCase no TS. Drizzle cuida.
+- Soft delete via campo `active: boolean` quando aplicável. Hard delete só em audit_log e idempotencyKeys com job de limpeza.

@@ -1,0 +1,11 @@
+---
+description: Convenções globais do projeto
+alwaysApply: true
+---
+- Stack: Next.js 15 App Router, TS strict, Drizzle, tRPC, Zod, Tailwind v4, shadcn/ui, Auth.js v5
+- pnpm é o gerenciador. Nunca sugira npm ou yarn.
+- Arquivos ≤ 300 linhas. Se passar, refatore.
+- Sem `any`. Use `unknown` + Zod.
+- Datas: `timestamp with time zone`. IDs: UUID v4.
+- Imports: type imports sempre com `import type`.
+- Commits seguem Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:`).

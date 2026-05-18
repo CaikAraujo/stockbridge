@@ -1,0 +1,14 @@
+node_modules
+.next
+dist
+build
+coverage
+.turbo
+*.log
+pnpm-lock.yaml
+.env
+.env.local
+.env.production
+db/migrations/*.sql
+public/icons
+.vercel

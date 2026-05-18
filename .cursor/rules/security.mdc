@@ -1,0 +1,15 @@
+---
+description: Segurança não-negociável
+alwaysApply: true
+---
+- Nunca commite arquivos `.env*` exceto `.env.example`.
+- Nunca logue: password, token, pin, secret, apiKey, totpSecret, idempotencyKey de outro user.
+- Toda input do usuário passa por Zod antes de tocar DB.
+- Drizzle queries só. Nunca raw SQL com interpolação de string.
+- Cookies: httpOnly + sameSite='lax' + secure em produção.
+- Headers obrigatórios em produção: HSTS, CSP, X-Content-Type-Options, Referrer-Policy.
+- Rate limit em toda procedure pública e em login.
+- 2FA (TOTP) obrigatório para admin e manager.
+- Senhas/PINs com argon2id. Nunca bcrypt para novos hashes.
+- Sessões em DB (não JWT puro). Rotação em mudança de role.
+- Toda mutation registra audit_log: userId, action, entityType, entityId, ip, userAgent.

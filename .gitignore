@@ -1,0 +1,41 @@
+# deps
+node_modules
+.pnpm-store
+
+# build
+.next
+dist
+build
+out
+
+# env
+.env
+.env.local
+.env*.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editor
+.vscode
+.idea
+.cursor/cache
+
+# os
+.DS_Store
+Thumbs.db
+
+# test
+coverage
+.nyc_output
+playwright-report
+test-results
+
+# misc
+.turbo
+.vercel
+*.tsbuildinfo
+next-env.d.ts
