@@ -16,7 +16,7 @@ Painel admin desktop-only. PWA offline-first para motoristas.
 - pnpm (gerenciador)
 
 ## Princípios não negociáveis
-1. **stock_movements é append-only**. Nunca UPDATE, nunca DELETE. Saldo = SUM(quantityDelta).
+1. **stock_movements é append-only** — nunca UPDATE, nunca DELETE nos dados de movimento. Exceção: campos voided_* para soft-void (trigger SQL reverte stock_levels automaticamente). Saldo correto = SUM(quantityDelta) WHERE voided_at IS NULL.
 2. **Toda mutation tem idempotencyKey**. Sem exceção.
 3. **Toda procedure tRPC declara role mínima** via middleware (`adminProcedure`, `managerProcedure`, `driverProcedure`).
 4. **Toda entrada é validada com Zod**. Schemas em `lib/schemas/`.

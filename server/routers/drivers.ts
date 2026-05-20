@@ -15,11 +15,10 @@ export const driversRouter = router({
         name: true,
         email: true,
         phone: true,
+        role: true,
         defaultLocationId: true,
-        lastLoginAt: true,
         active: true,
-        pinHash: false,
-        totpSecret: false,
+        lastLoginAt: true,
       },
     });
   }),
@@ -42,16 +41,17 @@ export const driversRouter = router({
           message: 'Motoristas só podem consultar seu próprio histórico',
         });
       }
-      const truck = await ctx.db.query.locations.findFirst({
-        where: (l, { eq: eqFn }) => eqFn(l.assignedUserId, input.driverId),
-      });
-
-      if (!truck) return { driver: null, truck: null, operations: [] };
 
       const driver = await ctx.db.query.users.findFirst({
         where: (u, { eq: eqFn }) => eqFn(u.id, input.driverId),
         columns: { id: true, name: true, email: true, phone: true },
       });
+      if (!driver) return { driver: null, truck: null, operations: [] };
+
+      const truck = await ctx.db.query.locations.findFirst({
+        where: (l, { eq: eqFn }) => eqFn(l.assignedUserId, input.driverId),
+      });
+      if (!truck) return { driver, truck: null, operations: [] };
 
       const ops = await ctx.db
         .select({

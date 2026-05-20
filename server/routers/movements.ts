@@ -19,6 +19,18 @@ const movementService = new StockMovementService(db);
 export const movementsRouter = router({
   // Atividade recente (dashboard)
   recentActivity: protectedProcedure.input(recentActivitySchema).query(async ({ ctx, input }) => {
+    if (ctx.user.role === 'driver') {
+      const myTruck = await ctx.db.query.locations.findFirst({
+        where: (l, { eq }) => eq(l.assignedUserId, ctx.user.id),
+        columns: { id: true },
+      });
+      if (!myTruck) return [];
+      if (input.locationId && input.locationId !== myTruck.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      input = { ...input, locationId: myTruck.id };
+    }
+
     const rows = await ctx.db
       .select({
         id: stockMovements.id,
@@ -123,15 +135,28 @@ export const movementsRouter = router({
         .merge(idempotencySchema),
     )
     .mutation(async ({ ctx, input }) => {
+      const [from, to] = await Promise.all([
+        ctx.db.query.locations.findFirst({
+          where: (l, { eq }) => eq(l.id, input.fromLocationId),
+          columns: { id: true, type: true, assignedUserId: true, active: true },
+        }),
+        ctx.db.query.locations.findFirst({
+          where: (l, { eq }) => eq(l.id, input.toLocationId),
+          columns: { id: true, type: true, assignedUserId: true, active: true },
+        }),
+      ]);
+      if (!from?.active || !to?.active) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Location inválida' });
+      }
       if (ctx.user.role === 'driver') {
-        const loc = await ctx.db.query.locations.findFirst({
-          where: (l, { eq: eqFn, and: andFn }) =>
-            andFn(eqFn(l.id, input.toLocationId), eqFn(l.assignedUserId, ctx.user.id)),
-        });
-        if (!loc) {
+        const isWithdraw =
+          from.type === 'warehouse' && to.type === 'truck' && to.assignedUserId === ctx.user.id;
+        const isReturn =
+          from.type === 'truck' && from.assignedUserId === ctx.user.id && to.type === 'warehouse';
+        if (!isWithdraw && !isReturn) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Você só pode retirar para o seu próprio caminhão',
+            message: 'Motorista só transfere entre o depósito e o próprio caminhão',
           });
         }
       }
@@ -156,15 +181,28 @@ export const movementsRouter = router({
         .merge(idempotencySchema),
     )
     .mutation(async ({ ctx, input }) => {
+      const [from, to] = await Promise.all([
+        ctx.db.query.locations.findFirst({
+          where: (l, { eq }) => eq(l.id, input.fromLocationId),
+          columns: { id: true, type: true, assignedUserId: true, active: true },
+        }),
+        ctx.db.query.locations.findFirst({
+          where: (l, { eq }) => eq(l.id, input.toLocationId),
+          columns: { id: true, type: true, assignedUserId: true, active: true },
+        }),
+      ]);
+      if (!from?.active || !to?.active) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Location inválida' });
+      }
       if (ctx.user.role === 'driver') {
-        const loc = await ctx.db.query.locations.findFirst({
-          where: (l, { eq: eqFn, and: andFn }) =>
-            andFn(eqFn(l.id, input.fromLocationId), eqFn(l.assignedUserId, ctx.user.id)),
-        });
-        if (!loc) {
+        const isWithdraw =
+          from.type === 'warehouse' && to.type === 'truck' && to.assignedUserId === ctx.user.id;
+        const isReturn =
+          from.type === 'truck' && from.assignedUserId === ctx.user.id && to.type === 'warehouse';
+        if (!isWithdraw && !isReturn) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Você só pode devolver do seu próprio caminhão',
+            message: 'Motorista só transfere entre o depósito e o próprio caminhão',
           });
         }
       }

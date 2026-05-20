@@ -257,7 +257,7 @@ export class StockMovementService {
         articleId: params.articleId,
         locationId: params.toLocationId,
         quantityDelta: quantityStr,
-        movementType: 'transfer_in',
+        movementType: 'return',
         transferId: transfer.id,
         unitCostCents: article?.costPriceCents,
         createdBy: params.createdBy,
