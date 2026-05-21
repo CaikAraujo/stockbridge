@@ -5,6 +5,7 @@ import { dashboardRouter } from './dashboard';
 import { driversRouter } from './drivers';
 import { locationsRouter } from './locations';
 import { movementsRouter } from './movements';
+import { usersRouter } from './users';
 
 export const appRouter = router({
   auth: authRouter,
@@ -13,6 +14,7 @@ export const appRouter = router({
   movements: movementsRouter,
   dashboard: dashboardRouter,
   drivers: driversRouter,
+  users: usersRouter,
 });
 
 export type AppRouter = typeof appRouter;

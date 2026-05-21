@@ -5,6 +5,7 @@ import {
   IconArrowLeft,
   IconArrowUp,
   IconCheck,
+  IconLock,
   IconMinus,
   IconPackage,
   IconPlus,
@@ -21,6 +22,10 @@ type Action = 'withdraw' | 'return';
 
 const STEP = 0.5;
 
+// Teclado numérico 3×4 — '' é célula invisível, '⌫' é backspace
+const PIN_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'] as const;
+type PinKey = (typeof PIN_KEYS)[number];
+
 interface Props {
   article: Article;
   warehouse: Location;
@@ -30,20 +35,46 @@ interface Props {
 
 export function WithdrawReturnForm({ article, warehouse, truck, userName }: Props) {
   const router = useRouter();
+
   const [action, setAction] = useState<Action>('withdraw');
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [pin, setPin] = useState('');
+  const [pinError, setPinError] = useState('');
 
   const withdrawMutation = api.movements.withdraw.useMutation();
   const returnMutation = api.movements.return.useMutation();
+  const verifyPinMutation = api.users.verifyPin.useMutation();
 
-  const handleSubmit = async () => {
-    if (qty <= 0 || loading) return;
+  // Etapa 1 — abre o modal de PIN (não executa nada ainda)
+  const handleConfirm = () => {
+    if (qty <= 0) return;
+    setPin('');
+    setPinError('');
+    setShowPin(true);
+  };
+
+  const handlePinKey = (key: PinKey) => {
+    if (key === '⌫') {
+      setPin((p) => p.slice(0, -1));
+    } else if (key !== '' && pin.length < 4) {
+      setPin((p) => p + String(key));
+    }
+  };
+
+  // Etapa 2 — verifica PIN e só então executa a operação
+  const handlePinSubmit = async () => {
+    if (pin.length !== 4 || loading) return;
     setLoading(true);
+    setPinError('');
 
     try {
-      const idempotencyKey = uuidv4();
+      // Chamada separada 1: verificar PIN
+      await verifyPinMutation.mutateAsync({ pin });
 
+      // Chamada separada 2: executar movimento
+      const idempotencyKey = uuidv4();
       if (action === 'withdraw') {
         await withdrawMutation.mutateAsync({
           articleId: article.id,
@@ -64,10 +95,19 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
         toast.success(`${qty} ${article.unit} devolvido(s) com sucesso`);
       }
 
+      setShowPin(false);
       router.push('/driver');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao registrar operação';
-      toast.error(msg);
+      const msg = err instanceof Error ? err.message : 'Erro';
+      if (msg.includes('PIN')) {
+        // Erro de autenticação: mantém modal aberto, limpa PIN
+        setPinError(msg);
+        setPin('');
+      } else {
+        // Erro de negócio: fecha modal, exibe toast
+        toast.error(msg);
+        setShowPin(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -104,7 +144,6 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
       <div className="flex-1 space-y-4 overflow-auto p-4">
         {/* Seleção de ação */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Retirada */}
           <button
             type="button"
             onClick={() => setAction('withdraw')}
@@ -113,9 +152,7 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
             }`}
           >
             <div
-              className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                isWithdraw ? 'bg-brand-500' : 'bg-surface'
-              }`}
+              className={`flex h-10 w-10 items-center justify-center rounded-full ${isWithdraw ? 'bg-brand-500' : 'bg-surface'}`}
             >
               <IconArrowDown
                 size={20}
@@ -130,7 +167,6 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
             <span className="text-center text-xs text-text-muted">Depósito → Caminhão</span>
           </button>
 
-          {/* Devolução */}
           <button
             type="button"
             onClick={() => setAction('return')}
@@ -139,9 +175,7 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
             }`}
           >
             <div
-              className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                !isWithdraw ? 'bg-status-ok' : 'bg-surface'
-              }`}
+              className={`flex h-10 w-10 items-center justify-center rounded-full ${!isWithdraw ? 'bg-status-ok' : 'bg-surface'}`}
             >
               <IconArrowUp
                 size={20}
@@ -166,8 +200,8 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
             <button
               type="button"
               onClick={decrease}
-              className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-surface-border bg-surface transition-colors hover:border-brand-500 hover:bg-brand-50"
               aria-label="Diminuir"
+              className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-surface-border bg-surface transition-colors hover:border-brand-500 hover:bg-brand-50"
             >
               <IconMinus size={20} className="text-text-secondary" />
             </button>
@@ -178,13 +212,12 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
             <button
               type="button"
               onClick={increase}
-              className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-surface-border bg-surface transition-colors hover:border-brand-500 hover:bg-brand-50"
               aria-label="Aumentar"
+              className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-surface-border bg-surface transition-colors hover:border-brand-500 hover:bg-brand-50"
             >
               <IconPlus size={20} className="text-text-secondary" />
             </button>
           </div>
-
           <input
             type="number"
             step={STEP}
@@ -213,26 +246,93 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
         </div>
       </div>
 
-      {/* Botão confirmar */}
+      {/* Botão principal — abre modal de PIN */}
       <div className="border-t border-surface-border bg-white p-4">
         <button
           type="button"
-          onClick={handleSubmit}
-          disabled={loading || qty <= 0}
+          onClick={handleConfirm}
+          disabled={qty <= 0}
           className={`flex w-full items-center justify-center gap-2 rounded-btn py-4 text-base font-medium text-white transition-colors disabled:opacity-40 ${
             isWithdraw ? 'bg-brand-500 hover:bg-brand-600' : 'bg-status-ok hover:bg-green-700'
           }`}
         >
-          {loading ? (
-            <span>Registrando…</span>
-          ) : (
-            <>
-              <IconCheck size={20} />
-              Confirmar {isWithdraw ? 'Retirada' : 'Devolução'}
-            </>
-          )}
+          <IconCheck size={20} />
+          Confirmar {isWithdraw ? 'Retirada' : 'Devolução'}
         </button>
       </div>
+
+      {/* Modal PIN — bottom sheet */}
+      {showPin && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/40">
+          <div className="w-full rounded-t-2xl bg-white p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50">
+                <IconLock size={20} className="text-brand-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text-primary">Confirme com seu PIN</p>
+                <p className="text-xs text-text-secondary">4 dígitos para autorizar a operação</p>
+              </div>
+            </div>
+
+            {/* Dots de progresso */}
+            <div className="mb-2 flex justify-center gap-3">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={`h-3 w-3 rounded-full transition-colors ${
+                    i < pin.length ? 'bg-brand-500' : 'bg-surface-border'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {pinError && (
+              <p className="mb-3 text-center text-xs text-status-critical">{pinError}</p>
+            )}
+
+            {/* Teclado numérico 3×4 */}
+            <div className="mb-4 grid grid-cols-3 gap-2">
+              {PIN_KEYS.map((key) => (
+                <button
+                  key={String(key)}
+                  type="button"
+                  onClick={() => handlePinKey(key)}
+                  disabled={loading}
+                  className={`rounded-btn py-3.5 text-xl font-medium transition-colors disabled:opacity-50 ${
+                    key === ''
+                      ? 'invisible'
+                      : key === '⌫'
+                        ? 'bg-surface text-text-secondary hover:bg-surface-border'
+                        : 'bg-surface text-text-primary hover:bg-brand-50'
+                  }`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPin(false)}
+                disabled={loading}
+                className="flex-1 rounded-btn border border-surface-border py-3 text-sm text-text-secondary hover:bg-surface disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handlePinSubmit}
+                disabled={pin.length !== 4 || loading}
+                className="flex-1 rounded-btn bg-brand-500 py-3 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-40"
+              >
+                {loading ? 'Verificando…' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

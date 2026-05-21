@@ -1,7 +1,9 @@
 import { IconMail, IconPackage } from '@tabler/icons-react';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AuthError } from 'next-auth';
 import { signIn } from '@/lib/auth/config';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export default async function LoginPage({
   searchParams,
@@ -13,7 +15,6 @@ export default async function LoginPage({
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-500">
             <IconPackage size={22} className="text-white" />
@@ -22,22 +23,37 @@ export default async function LoginPage({
           <p className="mt-1 text-sm text-text-secondary">Acesso ao sistema</p>
         </div>
 
-        {/* Form */}
         <div className="rounded-card border border-surface-border bg-white p-6 shadow-sm">
           {error && (
-            <div className="mb-4 rounded-btn bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
-              {error === 'Verification'
-                ? 'Link expirado ou inválido. Solicite um novo.'
-                : 'Erro ao fazer login. Tente novamente.'}
+            <div className="mb-4 rounded-btn border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error === 'RateLimit'
+                ? 'Muitas tentativas. Aguarde 10 minutos.'
+                : error === 'Verification'
+                  ? 'Link expirado ou inválido. Solicite um novo.'
+                  : 'Erro ao fazer login. Tente novamente.'}
             </div>
           )}
 
           <form
             action={async (formData: FormData) => {
               'use server';
+              const email = formData.get('email') as string;
+              const headersList = await headers();
+              const ip =
+                headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+                headersList.get('x-real-ip') ??
+                'unknown';
+
+              // Rate limit: 5 tentativas por IP+email a cada 10 minutos
+              const rlKey = `login:${ip}:${email}`;
+              const rl = checkRateLimit(rlKey, 5, 10 * 60 * 1000);
+              if (!rl.allowed) {
+                redirect('/login?error=RateLimit');
+              }
+
               try {
                 await signIn('resend', {
-                  email: formData.get('email') as string,
+                  email,
                   redirectTo: callbackUrl ?? '/dashboard',
                 });
               } catch (err) {
@@ -48,11 +64,14 @@ export default async function LoginPage({
               }
             }}
           >
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-text-primary">
+            <label
+              htmlFor="login-email"
+              className="mb-1.5 block text-sm font-medium text-text-primary"
+            >
               E-mail
             </label>
             <input
-              id="email"
+              id="login-email"
               type="email"
               name="email"
               required
@@ -61,7 +80,7 @@ export default async function LoginPage({
             />
             <button
               type="submit"
-              className="w-full rounded-btn bg-brand-500 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
+              className="w-full rounded-btn bg-brand-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-600"
             >
               Enviar link de acesso
             </button>
@@ -69,7 +88,7 @@ export default async function LoginPage({
 
           <div className="mt-4 flex gap-2 rounded-btn bg-brand-50 px-3 py-2.5">
             <IconMail size={15} className="mt-0.5 flex-shrink-0 text-brand-500" />
-            <p className="text-xs text-brand-500 leading-relaxed">
+            <p className="text-xs leading-relaxed text-brand-500">
               Você receberá um link seguro no e-mail. Válido por 10 minutos.
             </p>
           </div>

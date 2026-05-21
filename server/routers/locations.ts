@@ -1,7 +1,10 @@
+import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { articles, locations, stockLevels, users } from '@/db/schema';
+import { idempotencySchema } from '@/lib/schemas/common';
 import { locationListSchema } from '@/lib/schemas/locations';
-import { protectedProcedure } from '@/server/procedures';
+import { adminProcedure, protectedProcedure } from '@/server/procedures';
 import { router } from '@/server/trpc';
 
 export const locationsRouter = router({
@@ -42,5 +45,24 @@ export const locationsRouter = router({
         .where(eq(locations.active, true));
 
       return rows;
+    }),
+
+  assignDriver: adminProcedure
+    .input(
+      z
+        .object({
+          locationId: z.string().uuid(),
+          userId: z.string().uuid().nullable(),
+        })
+        .merge(idempotencySchema),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [loc] = await ctx.db
+        .update(locations)
+        .set({ assignedUserId: input.userId, updatedAt: new Date() })
+        .where(eq(locations.id, input.locationId))
+        .returning({ id: locations.id, name: locations.name });
+      if (!loc) throw new TRPCError({ code: 'NOT_FOUND' });
+      return loc;
     }),
 });
