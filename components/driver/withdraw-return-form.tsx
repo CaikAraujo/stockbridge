@@ -14,6 +14,9 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
+import { useOfflineQueue } from '@/hooks/use-offline-queue';
+import { useOnlineStatus } from '@/hooks/use-online-status';
+import { addToQueue } from '@/lib/offline-queue';
 import { api } from '@/lib/trpc/client';
 
 type Article = { id: string; name: string; sku: string; unit: string };
@@ -43,6 +46,9 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState('');
 
+  const isOnline = useOnlineStatus();
+  const { updateCount } = useOfflineQueue();
+
   const withdrawMutation = api.movements.withdraw.useMutation();
   const returnMutation = api.movements.return.useMutation();
   const verifyPinMutation = api.users.verifyPin.useMutation();
@@ -63,36 +69,56 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
     }
   };
 
-  // Etapa 2 — verifica PIN e só então executa a operação
   const handlePinSubmit = async () => {
-    if (pin.length !== 4 || loading) return;
+    if (pin.length !== 4) return;
     setLoading(true);
     setPinError('');
 
     try {
-      // Chamada separada 1: verificar PIN
-      await verifyPinMutation.mutateAsync({ pin });
+      const key = uuidv4();
 
-      // Chamada separada 2: executar movimento
-      const idempotencyKey = uuidv4();
-      if (action === 'withdraw') {
-        await withdrawMutation.mutateAsync({
-          articleId: article.id,
-          quantity: qty,
-          fromLocationId: warehouse.id,
-          toLocationId: truck.id,
-          idempotencyKey,
-        });
-        toast.success(`${qty} ${article.unit} retirado(s) com sucesso`);
+      if (isOnline) {
+        await verifyPinMutation.mutateAsync({ pin });
+
+        if (action === 'withdraw') {
+          await withdrawMutation.mutateAsync({
+            articleId: article.id,
+            quantity: qty,
+            fromLocationId: warehouse.id,
+            toLocationId: truck.id,
+            idempotencyKey: key,
+          });
+        } else {
+          await returnMutation.mutateAsync({
+            articleId: article.id,
+            quantity: qty,
+            fromLocationId: truck.id,
+            toLocationId: warehouse.id,
+            idempotencyKey: key,
+          });
+        }
+        toast.success(
+          `${qty} ${article.unit} ${action === 'withdraw' ? 'retirado(s)' : 'devolvido(s)'} com sucesso`,
+        );
       } else {
-        await returnMutation.mutateAsync({
-          articleId: article.id,
-          quantity: qty,
-          fromLocationId: truck.id,
-          toLocationId: warehouse.id,
-          idempotencyKey,
+        addToQueue({
+          id: key,
+          type: action,
+          payload: {
+            articleId: article.id,
+            quantity: qty,
+            fromLocationId: action === 'withdraw' ? warehouse.id : truck.id,
+            toLocationId: action === 'withdraw' ? truck.id : warehouse.id,
+            idempotencyKey: key,
+            articleName: article.name,
+            unit: article.unit,
+          },
+          createdAt: new Date().toISOString(),
         });
-        toast.success(`${qty} ${article.unit} devolvido(s) com sucesso`);
+        updateCount();
+        toast.info('Sem conexão. Operação salva — será enviada quando voltar online.', {
+          duration: 5000,
+        });
       }
 
       setShowPin(false);
@@ -100,11 +126,9 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro';
       if (msg.includes('PIN')) {
-        // Erro de autenticação: mantém modal aberto, limpa PIN
         setPinError(msg);
         setPin('');
       } else {
-        // Erro de negócio: fecha modal, exibe toast
         toast.error(msg);
         setShowPin(false);
       }
