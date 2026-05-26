@@ -42,3 +42,23 @@ export const voidSchema = z
     voidReason: z.string().min(5).max(300),
   })
   .merge(idempotencySchema);
+
+export const restockSchema = z
+  .object({
+    articleId: z.string().uuid(),
+    locationId: z.string().uuid(),
+    quantity: z.number().positive(),
+    notes: z.string().max(300).optional(),
+    unitCostCents: z.number().int().nonnegative().optional(),
+  })
+  .merge(idempotencySchema);
+
+export const adjustSchema = z
+  .object({
+    articleId: z.string().uuid(),
+    locationId: z.string().uuid(),
+    newQuantity: z.number().min(0),
+    reason: z.string().min(5, 'Motivo obrigatório (mín. 5 caracteres)').max(300),
+    photoUrl: z.string().url().optional(),
+  })
+  .merge(idempotencySchema);

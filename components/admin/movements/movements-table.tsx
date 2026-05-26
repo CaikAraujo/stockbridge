@@ -1,9 +1,18 @@
 'use client';
 
-import { IconAdjustments, IconArrowDownLeft, IconArrowUpRight, IconBan } from '@tabler/icons-react';
+import {
+  IconAdjustments,
+  IconArrowDownLeft,
+  IconArrowUpRight,
+  IconBan,
+  IconDownload,
+  IconPlus,
+} from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import Link from 'next/link';
 import { useState } from 'react';
+import { exportToCSV } from '@/lib/csv-export';
 
 const TYPE_CONFIG = {
   consumption: {
@@ -90,50 +99,86 @@ export function MovementsTable({ initialData, locations }: Props) {
     return matchType && matchLocation;
   });
 
+  const handleExport = () => {
+    exportToCSV(filtered, 'movimentacoes', [
+      {
+        key: (r) => format(new Date(r.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+        label: 'Data/hora',
+      },
+      { key: (r) => TYPE_CONFIG[r.movementType].label, label: 'Tipo' },
+      { key: (r) => r.articleName, label: 'Artigo' },
+      { key: (r) => r.articleSku, label: 'SKU' },
+      { key: (r) => r.quantityDelta, label: 'Quantidade' },
+      { key: (r) => r.articleUnit, label: 'Unidade' },
+      { key: (r) => r.locationName, label: 'Location' },
+      { key: (r) => r.createdByName, label: 'Operador' },
+    ]);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3">
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as MovementType | '')}
-          className="rounded-btn border border-surface-border bg-white px-3 py-2 text-sm text-text-primary focus:border-brand-500 focus:outline-none"
-        >
-          <option value="">Todos os tipos</option>
-          {(
-            Object.entries(TYPE_CONFIG) as [MovementType, (typeof TYPE_CONFIG)[MovementType]][]
-          ).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v.label}
-            </option>
-          ))}
-        </select>
+      {/* Cabeçalho: filtros + ações */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-3">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as MovementType | '')}
+            className="rounded-btn border border-surface-border bg-white px-3 py-2 text-sm text-text-primary focus:border-brand-500 focus:outline-none"
+          >
+            <option value="">Todos os tipos</option>
+            {(
+              Object.entries(TYPE_CONFIG) as [MovementType, (typeof TYPE_CONFIG)[MovementType]][]
+            ).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v.label}
+              </option>
+            ))}
+          </select>
 
-        <select
-          value={locationFilter}
-          onChange={(e) => setLocationFilter(e.target.value)}
-          className="rounded-btn border border-surface-border bg-white px-3 py-2 text-sm text-text-primary focus:border-brand-500 focus:outline-none"
-        >
-          <option value="">Todas as locations</option>
-          {locations.map((l) => (
-            <option key={l.id} value={l.name}>
-              {l.name}
-            </option>
-          ))}
-        </select>
+          <select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="rounded-btn border border-surface-border bg-white px-3 py-2 text-sm text-text-primary focus:border-brand-500 focus:outline-none"
+          >
+            <option value="">Todas as locations</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.name}>
+                {l.name}
+              </option>
+            ))}
+          </select>
 
-        {(typeFilter || locationFilter) && (
+          {(typeFilter || locationFilter) && (
+            <button
+              type="button"
+              onClick={() => {
+                setTypeFilter('');
+                setLocationFilter('');
+              }}
+              className="text-xs text-text-muted hover:text-text-secondary"
+            >
+              Limpar filtros
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              setTypeFilter('');
-              setLocationFilter('');
-            }}
-            className="text-xs text-text-muted hover:text-text-secondary"
+            onClick={handleExport}
+            className="flex items-center gap-1.5 rounded-btn border border-surface-border bg-white px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface"
           >
-            Limpar filtros
+            <IconDownload size={14} />
+            Exportar CSV
           </button>
-        )}
+          <Link
+            href="/movements/new"
+            className="flex items-center gap-1.5 rounded-btn bg-brand-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600"
+          >
+            <IconPlus size={14} />
+            Nova movimentação
+          </Link>
+        </div>
       </div>
 
       {/* Tabela */}
