@@ -1,4 +1,4 @@
-import { and, count, eq, gt, gte, isNull, lte, sql } from 'drizzle-orm';
+import { and, count, eq, gt, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { articles, locations, stockLevels, stockMovements, transfers, users } from '@/db/schema';
 import { idSchema } from '@/lib/schemas/common';
 import { protectedProcedure } from '@/server/procedures';
@@ -66,7 +66,7 @@ export const dashboardRouter = router({
           distinctSkus: sql<number>`cast(count(distinct ${stockLevels.articleId}) as integer)`,
         })
         .from(stockLevels)
-        .where(sql`${stockLevels.locationId} = any(${locationIds})`)
+        .where(inArray(stockLevels.locationId, locationIds))
         .groupBy(stockLevels.locationId),
 
       ctx.db
@@ -78,7 +78,7 @@ export const dashboardRouter = router({
         .innerJoin(articles, eq(stockLevels.articleId, articles.id))
         .where(
           and(
-            sql`${stockLevels.locationId} = any(${locationIds})`,
+            inArray(stockLevels.locationId, locationIds),
             lte(stockLevels.quantity, articles.reorderPoint),
           ),
         )
