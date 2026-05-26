@@ -44,8 +44,15 @@ export function useOfflineQueue() {
         removeFromQueue(op.id);
         processed++;
         updateCount();
-      } catch {
-        break;
+      } catch (err) {
+        const isNetworkError =
+          err instanceof Error && (err.message === 'Failed to fetch' || !navigator.onLine);
+        if (isNetworkError) break;
+        console.error(`[offline-queue] Op ${op.id} falhou:`, err);
+        removeFromQueue(op.id);
+        processed++;
+        toast.error(`Operação "${op.payload.articleName}" rejeitada pelo servidor`);
+        updateCount();
       }
     }
 
@@ -57,17 +64,21 @@ export function useOfflineQueue() {
     setSyncing(false);
   }, [withdraw, returnItem, updateCount]);
 
+  const processQueueRef = useRef(processQueue);
+  processQueueRef.current = processQueue;
+
   useEffect(() => {
     updateCount();
-
+    if (navigator.onLine) {
+      void processQueueRef.current();
+    }
     const handleOnline = () => {
       updateCount();
-      void processQueue();
+      void processQueueRef.current();
     };
-
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
-  }, [updateCount, processQueue]);
+  }, [updateCount]);
 
   return { pendingCount, syncing, processQueue, updateCount };
 }

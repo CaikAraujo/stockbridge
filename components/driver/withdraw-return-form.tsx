@@ -11,7 +11,7 @@ import {
   IconPlus,
 } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { useOfflineQueue } from '@/hooks/use-offline-queue';
@@ -43,6 +43,7 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showPin, setShowPin] = useState(false);
+  const submittingRef = useRef(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState('');
 
@@ -70,7 +71,8 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
   };
 
   const handlePinSubmit = async () => {
-    if (pin.length !== 4) return;
+    if (pin.length !== 4 || submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     setPinError('');
 
@@ -133,6 +135,7 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
         setShowPin(false);
       }
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

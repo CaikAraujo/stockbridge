@@ -30,7 +30,11 @@ export function getQueue(): PendingOperation[] {
 export function addToQueue(op: PendingOperation): void {
   const queue = getQueue();
   queue.push(op);
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+  try {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+  } catch {
+    throw new Error('Armazenamento local cheio. Conecte ao WiFi e sincronize antes de continuar.');
+  }
 }
 
 export function removeFromQueue(id: string): void {
