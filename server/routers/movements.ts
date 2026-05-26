@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq, gte, isNull, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
-import { articles, locations, stockLevels, stockMovements, users } from '@/db/schema';
+import { articles, locations, stockMovements, users } from '@/db/schema';
 import { idempotencySchema } from '@/lib/schemas/common';
 import { adjustSchema, recentActivitySchema, restockSchema } from '@/lib/schemas/movements';
 import {
@@ -234,64 +234,20 @@ export const movementsRouter = router({
   // Entrada de mercadoria (manager+)
   restock: managerProcedure.input(restockSchema).mutation(async ({ ctx, input }) => {
     const { idempotencyKey: _k, ...data } = input;
-    const quantityStr = data.quantity.toFixed(3);
-
-    const [movement] = await ctx.db
-      .insert(stockMovements)
-      .values({
-        articleId: data.articleId,
-        locationId: data.locationId,
-        quantityDelta: quantityStr,
-        movementType: 'restock',
-        unitCostCents: data.unitCostCents,
-        notes: data.notes,
-        createdBy: ctx.user.id,
-        idempotencyKey: input.idempotencyKey,
-      })
-      .returning();
-
-    if (!movement) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-    return movement;
+    return movementService.createRestock({
+      ...data,
+      createdBy: ctx.user.id,
+      idempotencyKey: input.idempotencyKey,
+    });
   }),
 
   // Ajuste manual (admin)
   adjust: adminProcedure.input(adjustSchema).mutation(async ({ ctx, input }) => {
     const { idempotencyKey: _k, ...data } = input;
-
-    const [level] = await ctx.db
-      .select({ quantity: stockLevels.quantity })
-      .from(stockLevels)
-      .where(
-        and(eq(stockLevels.articleId, data.articleId), eq(stockLevels.locationId, data.locationId)),
-      );
-
-    const current = parseFloat(level?.quantity ?? '0');
-    const delta = data.newQuantity - current;
-
-    if (Math.abs(delta) < 0.001) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Quantidade nova é igual à atual. Nenhum ajuste necessário.',
-      });
-    }
-
-    const deltaStr = delta.toFixed(3);
-
-    const [movement] = await ctx.db
-      .insert(stockMovements)
-      .values({
-        articleId: data.articleId,
-        locationId: data.locationId,
-        quantityDelta: deltaStr,
-        movementType: 'adjustment',
-        reason: data.reason,
-        photoUrl: data.photoUrl,
-        createdBy: ctx.user.id,
-        idempotencyKey: input.idempotencyKey,
-      })
-      .returning();
-
-    if (!movement) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-    return movement;
+    return movementService.createAdjustment({
+      ...data,
+      createdBy: ctx.user.id,
+      idempotencyKey: input.idempotencyKey,
+    });
   }),
 });

@@ -7,21 +7,30 @@ interface LowStockItem {
   locationName: string;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 export function stockAlertEmailHtml(items: LowStockItem[]): string {
   const rows = items
     .map(
       (item) => `
     <tr style="border-bottom: 1px solid #e5e7eb;">
       <td style="padding: 10px 12px; font-size: 13px; color: #111827; font-weight: 500;">
-        ${item.articleName}
-        <div style="font-size: 11px; color: #6b7280; font-family: monospace;">${item.articleSku}</div>
+        ${escapeHtml(item.articleName)}
+        <div style="font-size: 11px; color: #6b7280; font-family: monospace;">${escapeHtml(item.articleSku)}</div>
       </td>
-      <td style="padding: 10px 12px; font-size: 13px; color: #6b7280;">${item.locationName}</td>
+      <td style="padding: 10px 12px; font-size: 13px; color: #6b7280;">${escapeHtml(item.locationName)}</td>
       <td style="padding: 10px 12px; font-size: 13px; color: #d97706; font-weight: 500;">
-        ${parseFloat(item.quantity).toFixed(3)} ${item.unit}
+        ${parseFloat(item.quantity).toFixed(3)} ${escapeHtml(item.unit)}
       </td>
       <td style="padding: 10px 12px; font-size: 13px; color: #6b7280;">
-        mín. ${parseFloat(item.reorderPoint).toFixed(3)} ${item.unit}
+        mín. ${parseFloat(item.reorderPoint).toFixed(3)} ${escapeHtml(item.unit)}
       </td>
     </tr>`,
     )

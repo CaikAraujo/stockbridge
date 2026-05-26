@@ -304,6 +304,102 @@ export class StockMovementService {
   }
 
   // ================================================================
+  // RESTOCK: entrada de mercadoria no depósito
+  // ================================================================
+  async createRestock(params: {
+    articleId: string;
+    locationId: string;
+    quantity: number;
+    notes?: string;
+    unitCostCents?: number;
+    createdBy: string;
+    idempotencyKey: string;
+  }) {
+    const location = await this.db.query.locations.findFirst({
+      where: (l, { eq: eqFn }) => eqFn(l.id, params.locationId),
+      columns: { type: true, active: true },
+    });
+    if (!location?.active || location.type !== 'warehouse') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Restock permitido apenas no depósito',
+      });
+    }
+
+    return await this.db.transaction(async (tx) => {
+      const quantityStr = params.quantity.toFixed(3);
+      const [movement] = await tx
+        .insert(stockMovements)
+        .values({
+          articleId: params.articleId,
+          locationId: params.locationId,
+          quantityDelta: quantityStr,
+          movementType: 'restock',
+          unitCostCents: params.unitCostCents,
+          notes: params.notes,
+          createdBy: params.createdBy,
+          idempotencyKey: params.idempotencyKey,
+        })
+        .returning();
+      if (!movement) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      return movement;
+    });
+  }
+
+  // ================================================================
+  // ADJUSTMENT: ajuste manual de inventário (admin)
+  // ================================================================
+  async createAdjustment(params: {
+    articleId: string;
+    locationId: string;
+    newQuantity: number;
+    reason: string;
+    photoUrl?: string;
+    createdBy: string;
+    idempotencyKey: string;
+  }) {
+    return await this.db.transaction(async (tx) => {
+      const [level] = await tx
+        .select({ quantity: stockLevels.quantity })
+        .from(stockLevels)
+        .where(
+          and(
+            eq(stockLevels.articleId, params.articleId),
+            eq(stockLevels.locationId, params.locationId),
+          ),
+        )
+        .for('update');
+
+      const current = parseFloat(level?.quantity ?? '0');
+      const delta = params.newQuantity - current;
+
+      if (Math.abs(delta) < 0.001) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Quantidade nova é igual à atual. Nenhum ajuste necessário.',
+        });
+      }
+
+      const [movement] = await tx
+        .insert(stockMovements)
+        .values({
+          articleId: params.articleId,
+          locationId: params.locationId,
+          quantityDelta: delta.toFixed(3),
+          movementType: 'adjustment',
+          reason: params.reason,
+          photoUrl: params.photoUrl,
+          createdBy: params.createdBy,
+          idempotencyKey: params.idempotencyKey,
+        })
+        .returning();
+
+      if (!movement) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      return movement;
+    });
+  }
+
+  // ================================================================
   // VOID TRANSFER: estorna todos os movimentos de uma transferência
   // (CORREÇÃO 4)
   // ================================================================
