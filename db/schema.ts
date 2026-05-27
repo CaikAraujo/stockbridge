@@ -448,6 +448,7 @@ export const sessions = pgTable(
       .references(() => users.id)
       .notNull(),
     expires: timestamp('expires', { withTimezone: true }).notNull(),
+    totpVerified: boolean('totp_verified').notNull().default(false),
     ip: text('ip'),
     userAgent: text('user_agent'),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }).defaultNow().notNull(),

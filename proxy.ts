@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 
 const PUBLIC_PATHS = ['/login', '/login/verify', '/login/error', '/login/totp'];
 
+// Rotas públicas que admins logados ainda podem acessar (step-up TOTP)
+const TOTP_PATH = '/login/totp';
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
@@ -12,7 +15,9 @@ export function proxy(request: NextRequest) {
     request.cookies.get('__Secure-authjs.session-token');
   const isLoggedIn = !!sessionToken;
 
-  if (isPublic && isLoggedIn) {
+  // Usuário logado tentando acessar rota pública:
+  // exceção para /login/totp — admin precisa passar pelo step-up mesmo logado.
+  if (isPublic && isLoggedIn && !pathname.startsWith(TOTP_PATH)) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

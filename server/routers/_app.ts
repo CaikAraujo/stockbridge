@@ -5,6 +5,7 @@ import { dashboardRouter } from './dashboard';
 import { driversRouter } from './drivers';
 import { locationsRouter } from './locations';
 import { movementsRouter } from './movements';
+import { totpRouter } from './totp';
 import { usersRouter } from './users';
 
 export const appRouter = router({
@@ -14,6 +15,7 @@ export const appRouter = router({
   movements: movementsRouter,
   dashboard: dashboardRouter,
   drivers: driversRouter,
+  totp: totpRouter,
   users: usersRouter,
 });
 

@@ -10,6 +10,7 @@ import {
   IconLayoutSidebarRightCollapse,
   IconPackage,
   IconSettings,
+  IconShield,
   IconShieldLock,
   IconTransfer,
   IconTruck,
@@ -41,6 +42,7 @@ const NAV_GROUPS = [
     items: [
       { href: '/users', label: 'Usuários', icon: IconUsers },
       { href: '/audit', label: 'Auditoria', icon: IconShieldLock },
+      { href: '/settings/totp', label: 'Segurança', icon: IconShield },
       { href: '/settings', label: 'Configurações', icon: IconSettings },
     ],
   },
