@@ -1,4 +1,4 @@
-import { IconChevronDown, IconLogout, IconUser } from '@tabler/icons-react';
+import { IconChevronDown, IconUser } from '@tabler/icons-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,7 +6,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { auth, signOut } from '@/lib/auth/config';
+import { auth } from '@/lib/auth/config';
+import { LogoutButton } from '@/components/admin/layout/logout-button';
 
 interface AdminTopbarProps {
   title: string;
@@ -53,17 +54,7 @@ export async function AdminTopbar({ title, subtitle }: AdminTopbarProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild className="text-red-600 focus:text-red-600">
-            <form
-              action={async () => {
-                'use server';
-                await signOut({ redirectTo: '/login' });
-              }}
-            >
-              <button type="submit" className="flex w-full items-center">
-                <IconLogout size={14} className="mr-2" />
-                Sair
-              </button>
-            </form>
+            <LogoutButton />
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/layout/sidebar';
 import { db } from '@/db/client';
@@ -17,9 +17,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     });
 
     if (user?.totpSecret) {
+      // Sessão mais recente do usuário — Auth.js não expõe sessionToken no objeto Session
       const currentSession = await db.query.sessions.findFirst({
         where: (s) => eq(s.userId, session.user.id),
         columns: { totpVerified: true },
+        orderBy: (s) => desc(s.createdAt),
       });
 
       if (!currentSession?.totpVerified) {
