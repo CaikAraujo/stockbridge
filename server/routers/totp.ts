@@ -4,6 +4,7 @@ import { generateSecret, generateURI, verifySync } from 'otplib';
 import QRCode from 'qrcode';
 import { z } from 'zod';
 import { sessions, users } from '@/db/schema';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { adminProcedure, protectedProcedure } from '@/server/procedures';
 import { router } from '@/server/trpc';
 
@@ -19,6 +20,18 @@ const codeSchema = z.object({
 export const totpRouter = router({
   // Gera secret + QR code para o admin escanear
   setupGenerate: adminProcedure.mutation(async ({ ctx }) => {
+    const existing = await ctx.db.query.users.findFirst({
+      where: (u, { eq: eqFn }) => eqFn(u.id, ctx.user.id),
+      columns: { totpSecret: true },
+    });
+
+    if (existing?.totpSecret) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'TOTP já está ativo. Desative primeiro para reconfigurar.',
+      });
+    }
+
     const secret = generateSecret();
     const otpauth = generateURI({
       issuer: APP_NAME,
@@ -56,17 +69,29 @@ export const totpRouter = router({
       });
     }
 
-    // Marca sessão atual como TOTP verificada
+    // Marca apenas a sessão atual como TOTP verificada
     await ctx.db
       .update(sessions)
       .set({ totpVerified: true })
-      .where(eq(sessions.userId, ctx.user.id));
+      .where(
+        ctx.sessionToken
+          ? eq(sessions.sessionToken, ctx.sessionToken)
+          : eq(sessions.userId, ctx.user.id),
+      );
 
     return { activated: true };
   }),
 
   // Verifica código TOTP no fluxo de login (step-up)
   verify: protectedProcedure.input(codeSchema).mutation(async ({ ctx, input }) => {
+    const rl = checkRateLimit(`totp:verify:${ctx.user.id}`, 5, 15 * 60 * 1000);
+    if (!rl.allowed) {
+      throw new TRPCError({
+        code: 'TOO_MANY_REQUESTS',
+        message: 'Muitas tentativas. Aguarde 15 minutos.',
+      });
+    }
+
     const user = await ctx.db.query.users.findFirst({
       where: (u, { eq: eqFn }) => eqFn(u.id, ctx.user.id),
       columns: { totpSecret: true },
@@ -88,11 +113,15 @@ export const totpRouter = router({
       });
     }
 
-    // Marca sessão como TOTP verificada
+    // Marca apenas a sessão atual como TOTP verificada
     await ctx.db
       .update(sessions)
       .set({ totpVerified: true })
-      .where(eq(sessions.userId, ctx.user.id));
+      .where(
+        ctx.sessionToken
+          ? eq(sessions.sessionToken, ctx.sessionToken)
+          : eq(sessions.userId, ctx.user.id),
+      );
 
     return { verified: true };
   }),

@@ -1,4 +1,5 @@
 import { IconChevronDown, IconUser } from '@tabler/icons-react';
+import { LogoutButton } from '@/components/admin/layout/logout-button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,7 +8,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { auth } from '@/lib/auth/config';
-import { LogoutButton } from '@/components/admin/layout/logout-button';
 
 interface AdminTopbarProps {
   title: string;

@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { IconPackage, IconShieldLock } from '@tabler/icons-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/lib/trpc/client';
 
@@ -95,11 +94,7 @@ export default function TotpVerifyPage() {
             O input captura teclado físico; as células mostram o estado visual.
             Clicar em qualquer célula redireciona o foco para o input.
           */}
-          {/* biome-ignore lint/a11y/useKeyWithClickEvents: foco apenas — não é ação semântica */}
-          <div
-            className="relative flex justify-center gap-2 cursor-text"
-            onClick={() => inputRef.current?.focus()}
-          >
+          <div className="relative flex justify-center gap-2 cursor-text">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 // biome-ignore lint/suspicious/noArrayIndexKey: posição fixa
