@@ -1,10 +1,11 @@
 'use client';
 
-import { IconEdit, IconPlus, IconPrinter, IconSearch } from '@tabler/icons-react';
+import { IconEdit, IconPlus, IconPrinter, IconSearch, IconTrash } from '@tabler/icons-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { generateQRLabelsPDF } from '@/lib/qr-pdf';
+import { api } from '@/lib/trpc/client';
 
 type Article = {
   id: string;
@@ -28,8 +29,11 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [printing, setPrinting] = useState(false);
+  const [data, setData] = useState(initialData);
 
-  const filtered = initialData.items.filter(
+  const deleteArticle = api.articles.delete.useMutation();
+
+  const filtered = data.items.filter(
     (a) =>
       !search ||
       a.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -67,6 +71,26 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
       toast.error('Erro ao gerar PDF');
     } finally {
       setPrinting(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Eliminar "${name}"?`)) return;
+    try {
+      await deleteArticle.mutateAsync({ id });
+      setData((prev) => ({
+        ...prev,
+        items: prev.items.filter((a) => a.id !== id),
+        total: prev.total - 1,
+      }));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      toast.success('Artigo eliminado');
+    } catch {
+      toast.error('Erro ao eliminar artigo');
     }
   };
 
@@ -124,7 +148,7 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
                   className="rounded"
                 />
               </th>
-              {['SKU', 'Nome', 'Unidade', 'Mín.', 'Reposição', 'Tipo gás', ''].map((h) => (
+              {['SKU', 'Nome', 'Unidade', 'Mín.', 'Reposição', 'Tipo gás', '', ''].map((h) => (
                 <th
                   key={h}
                   className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted"
@@ -172,12 +196,24 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
                     Editar
                   </Link>
                 </td>
+                <td className="px-4 py-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(a.id, a.name)}
+                    disabled={deleteArticle.isPending}
+                    title="Eliminar artigo"
+                    className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-red-50 hover:text-status-critical disabled:opacity-50"
+                  >
+                    <IconTrash size={13} />
+                    Eliminar
+                  </button>
+                </td>
               </tr>
             ))}
 
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-sm text-text-muted">
+                <td colSpan={9} className="px-4 py-8 text-center text-sm text-text-muted">
                   {search
                     ? 'Nenhum artigo encontrado para esta busca.'
                     : 'Nenhum artigo cadastrado.'}

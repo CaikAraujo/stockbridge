@@ -1,10 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { articles, locations, stockLevels, users } from '@/db/schema';
+import { articles, locations, stockLevels, stockMovements, users } from '@/db/schema';
 import { idempotencySchema } from '@/lib/schemas/common';
 import { locationListSchema } from '@/lib/schemas/locations';
-import { adminProcedure, protectedProcedure } from '@/server/procedures';
+import { adminProcedure, managerProcedure, protectedProcedure } from '@/server/procedures';
 import { router } from '@/server/trpc';
 
 export const locationsRouter = router({
@@ -46,6 +46,49 @@ export const locationsRouter = router({
 
       return rows;
     }),
+
+  warehouseStock: managerProcedure.query(async ({ ctx }) => {
+    const warehouse = await ctx.db.query.locations.findFirst({
+      where: (l, { eq: eqFn }) => eqFn(l.type, 'warehouse'),
+      columns: { id: true, name: true },
+    });
+    if (!warehouse) return { warehouse: null, items: [], movements: [] };
+
+    const items = await ctx.db
+      .select({
+        articleId: stockLevels.articleId,
+        quantity: stockLevels.quantity,
+        articleName: articles.name,
+        articleSku: articles.sku,
+        articleUnit: articles.unit,
+        minStock: articles.minStock,
+        reorderPoint: articles.reorderPoint,
+      })
+      .from(stockLevels)
+      .innerJoin(articles, eq(stockLevels.articleId, articles.id))
+      .where(and(eq(stockLevels.locationId, warehouse.id), eq(articles.active, true)))
+      .orderBy(articles.name);
+
+    const movements = await ctx.db
+      .select({
+        id: stockMovements.id,
+        movementType: stockMovements.movementType,
+        quantityDelta: stockMovements.quantityDelta,
+        createdAt: stockMovements.createdAt,
+        voidedAt: stockMovements.voidedAt,
+        articleName: articles.name,
+        articleUnit: articles.unit,
+        userName: users.name,
+      })
+      .from(stockMovements)
+      .innerJoin(articles, eq(stockMovements.articleId, articles.id))
+      .innerJoin(users, eq(stockMovements.createdBy, users.id))
+      .where(eq(stockMovements.locationId, warehouse.id))
+      .orderBy(desc(stockMovements.createdAt))
+      .limit(50);
+
+    return { warehouse, items, movements };
+  }),
 
   assignDriver: adminProcedure
     .input(

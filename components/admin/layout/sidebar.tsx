@@ -5,6 +5,7 @@ import {
   IconBell,
   IconBox,
   IconBriefcase,
+  IconBuildingWarehouse,
   IconClipboardList,
   IconDroplet,
   IconFileText,
@@ -29,6 +30,7 @@ const NAV_GROUPS = [
   {
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
+      { href: '/deposito', label: 'Depósito', icon: IconBuildingWarehouse },
       { href: '/trucks', label: 'Caminhões', icon: IconTruck },
       { href: '/movements', label: 'Movimentações', icon: IconArrowLeftRight },
       { href: '/transfers', label: 'Transferências', icon: IconTransfer },

@@ -6,8 +6,8 @@ import { adminProcedure, managerProcedure } from '@/server/procedures';
 import { router } from '@/server/trpc';
 
 /**
- * Normaliza código de gás para matching.
- * "Gaz R32" ? "R32", "R-404A" ? "R404A"
+ * Normaliza codigo de gas para matching.
+ * "Gaz R32" -> "R32", "R-404A" -> "R404A"
  */
 export function normalizeGasCode(raw: string): string {
   return raw
@@ -17,7 +17,6 @@ export function normalizeGasCode(raw: string): string {
 }
 
 export const gasBottlesRouter = router({
-
   list: managerProcedure.query(async ({ ctx }) => {
     return ctx.db.query.gasBottles.findMany({
       with: {
@@ -28,14 +27,16 @@ export const gasBottlesRouter = router({
   }),
 
   create: adminProcedure
-    .input(z.object({
-      idempotencyKey:  z.string().uuid(),
-      name:            z.string().min(1).max(100),
-      reference:       z.string().min(1).max(50),
-      gasTypeCode:     z.string().min(1).max(20),
-      initialWeightKg: z.number().positive(),
-      locationId:      z.string().uuid().optional(),
-    }))
+    .input(
+      z.object({
+        idempotencyKey: z.string().uuid(),
+        name: z.string().min(1).max(100),
+        reference: z.string().min(1).max(50),
+        gasTypeCode: z.string().min(1).max(20),
+        initialWeightKg: z.number().positive(),
+        locationId: z.string().uuid().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.query.gasBottles.findFirst({
         where: (b, { eq: eqFn }) => eqFn(b.reference, input.reference),
@@ -43,8 +44,8 @@ export const gasBottlesRouter = router({
       });
       if (existing) {
         throw new TRPCError({
-          code:    'CONFLICT',
-          message: `Referência "${input.reference}" já existe`,
+          code: 'CONFLICT',
+          message: `Referencia "${input.reference}" ja existe`,
         });
       }
 
@@ -53,10 +54,10 @@ export const gasBottlesRouter = router({
         .insert(articles)
         .values({
           sku,
-          name:         `${input.name} (REF: ${input.reference})`,
-          unit:         'un',
-          active:       true,
-          minStock:     '0',
+          name: `${input.name} (REF: ${input.reference})`,
+          unit: 'un',
+          active: true,
+          minStock: '0',
           reorderPoint: '0',
         })
         .returning({ id: articles.id });
@@ -66,15 +67,15 @@ export const gasBottlesRouter = router({
       const [bottle] = await ctx.db
         .insert(gasBottles)
         .values({
-          name:            input.name,
-          reference:       input.reference,
-          gasTypeCode:     normalizeGasCode(input.gasTypeCode),
+          name: input.name,
+          reference: input.reference,
+          gasTypeCode: normalizeGasCode(input.gasTypeCode),
           initialWeightKg: String(input.initialWeightKg),
           currentWeightKg: String(input.initialWeightKg),
-          status:          'available',
-          locationId:      input.locationId ?? null,
-          articleId:       article.id,
-          createdBy:       ctx.user.id,
+          status: 'available',
+          locationId: input.locationId ?? null,
+          articleId: article.id,
+          createdBy: ctx.user.id,
         })
         .returning();
 
@@ -84,9 +85,9 @@ export const gasBottlesRouter = router({
         await ctx.db
           .insert(stockLevels)
           .values({
-            articleId:  article.id,
+            articleId: article.id,
             locationId: input.locationId,
-            quantity:   '1',
+            quantity: '1',
           })
           .onConflictDoNothing();
       }
@@ -95,10 +96,12 @@ export const gasBottlesRouter = router({
     }),
 
   delete: adminProcedure
-    .input(z.object({
-      idempotencyKey: z.string().uuid(),
-      bottleId:       z.string().uuid(),
-    }))
+    .input(
+      z.object({
+        idempotencyKey: z.string().uuid(),
+        bottleId: z.string().uuid(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const bottle = await ctx.db.query.gasBottles.findFirst({
         where: (b, { eq: eqFn }) => eqFn(b.id, input.bottleId),

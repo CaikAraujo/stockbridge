@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, count, eq, ilike } from 'drizzle-orm';
 import { DatabaseError } from 'pg';
+import { z } from 'zod';
 import { articles } from '@/db/schema';
 import {
   articleCreateSchema,
@@ -85,4 +86,14 @@ export const articlesRouter = router({
     if (!article) throw new TRPCError({ code: 'NOT_FOUND' });
     return article;
   }),
+
+  delete: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(articles)
+        .set({ active: false, updatedAt: new Date() })
+        .where(eq(articles.id, input.id));
+      return { success: true };
+    }),
 });

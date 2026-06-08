@@ -90,12 +90,13 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
         }
 
         for (const article of rawArticles) {
-          const matchedArticle = await matchArticle(article);
+          const cleanName = stripHtml(article.name);
+          const matchedArticle = await matchArticle({ ...article, name: cleanName });
           const priceCents = article.price ? parsePriceCents(article.price) : null;
 
           await tx.insert(rapportImportItems).values({
             rapportId: rapportImport.id,
-            description: article.name,
+            description: cleanName,
             interfastArticleId: article.articleId || null,
             supplierCode: article.supplierCode || null,
             quantity: String(article.quantity),
@@ -105,8 +106,8 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
             status: matchedArticle ? 'matched' : 'unmatched',
           });
 
-          if (isGasDescription(article.name) && article.unit === 'kg') {
-            await deductGasFromBottle(article.name, article.quantity, locationId, techName ?? null);
+          if (isGasDescription(cleanName) && article.unit === 'kg') {
+            await deductGasFromBottle(cleanName, article.quantity, locationId, techName ?? null);
           }
         }
 
@@ -120,6 +121,17 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
   }
 
   return result;
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .trim();
 }
 
 function normalizeName(s: string): string {
