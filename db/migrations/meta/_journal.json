@@ -36,6 +36,13 @@
       "when": 1748369400000,
       "tag": "0004_totp_session",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780963200000,
+      "tag": "0005_rapport_imports",
+      "breakpoints": true
     }
   ]
 }

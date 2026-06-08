@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -521,6 +522,55 @@ export const verificationTokens = pgTable(
   (t) => ({
     pk: primaryKey({ columns: [t.identifier, t.token] }),
     expiresIdx: index('verification_tokens_expires_idx').on(t.expires),
+  }),
+);
+
+// ============================================================
+// RAPPORT IMPORTS (integração InterFast)
+// ============================================================
+
+export const rapportImports = pgTable(
+  'rapport_imports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    interfastInterventionId: text('interfast_intervention_id').notNull().unique(),
+    interfastReference: text('interfast_reference'),
+    technicienName: text('technicien_name'),
+    clientName: text('client_name'),
+    locationId: uuid('location_id').references(() => locations.id),
+    interventionDate: date('intervention_date'),
+    status: text('status').notNull().default('pending'),
+    rawArticles: jsonb('raw_articles').notNull().default([]),
+    confirmedBy: uuid('confirmed_by').references(() => users.id),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index('rapport_imports_status_idx').on(t.status),
+  }),
+);
+
+export const rapportImportItems = pgTable(
+  'rapport_import_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rapportId: uuid('rapport_id')
+      .notNull()
+      .references(() => rapportImports.id, { onDelete: 'cascade' }),
+    description: text('description').notNull(),
+    interfastArticleId: text('interfast_article_id'),
+    supplierCode: text('supplier_code'),
+    quantity: numeric('quantity', { precision: 14, scale: 3 }).notNull(),
+    unit: text('unit').notNull(),
+    priceCents: integer('price_cents'),
+    articleId: uuid('article_id').references(() => articles.id),
+    movementId: uuid('movement_id').references(() => stockMovements.id),
+    status: text('status').notNull().default('unmatched'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    rapportIdx: index('rapport_import_items_rapport_idx').on(t.rapportId),
   }),
 );
 

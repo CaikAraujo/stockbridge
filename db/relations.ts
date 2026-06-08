@@ -4,6 +4,8 @@ import {
   categories,
   jobs,
   locations,
+  rapportImportItems,
+  rapportImports,
   sessions,
   stockCountItems,
   stockCounts,
@@ -230,5 +232,37 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, {
     fields: [sessions.userId],
     references: [users.id],
+  }),
+}));
+
+// ============================================================
+// RAPPORT IMPORTS
+// ============================================================
+
+export const rapportImportsRelations = relations(rapportImports, ({ one, many }) => ({
+  confirmedByUser: one(users, {
+    fields: [rapportImports.confirmedBy],
+    references: [users.id],
+    relationName: 'rapportConfirmedBy',
+  }),
+  location: one(locations, {
+    fields: [rapportImports.locationId],
+    references: [locations.id],
+  }),
+  items: many(rapportImportItems),
+}));
+
+export const rapportImportItemsRelations = relations(rapportImportItems, ({ one }) => ({
+  rapport: one(rapportImports, {
+    fields: [rapportImportItems.rapportId],
+    references: [rapportImports.id],
+  }),
+  article: one(articles, {
+    fields: [rapportImportItems.articleId],
+    references: [articles.id],
+  }),
+  movement: one(stockMovements, {
+    fields: [rapportImportItems.movementId],
+    references: [stockMovements.id],
   }),
 }));

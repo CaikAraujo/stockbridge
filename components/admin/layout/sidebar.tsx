@@ -5,6 +5,7 @@ import {
   IconBox,
   IconBriefcase,
   IconClipboardList,
+  IconFileText,
   IconLayoutDashboard,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarRightCollapse,
@@ -34,6 +35,7 @@ const NAV_GROUPS = [
   {
     items: [
       { href: '/articles', label: 'Artigos', icon: IconBox },
+      { href: '/rapports', label: 'Rapports', icon: IconFileText },
       { href: '/jobs', label: 'Ordens de serviço', icon: IconBriefcase },
       { href: '/inventory', label: 'Inventário', icon: IconClipboardList },
     ],
