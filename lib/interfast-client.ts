@@ -1,5 +1,10 @@
+import 'server-only';
+
 const BASE_URL = process.env.INTERFAST_API_URL ?? 'https://app.inter-fast.fr';
-const API_KEY = process.env.INTERFAST_API_KEY ?? '';
+const API_KEY = process.env.INTERFAST_API_KEY;
+if (!API_KEY) throw new Error('INTERFAST_API_KEY não configurada');
+
+const MAX_PAGES = 20;
 
 const headers = {
   'X-API-KEY': API_KEY,
@@ -66,7 +71,10 @@ export async function fetchRecentEvents(hoursBack = 2): Promise<InterfastEvent[]
   const count = 50;
 
   while (true) {
-    const res = await fetch(`${BASE_URL}/v1/events?page=${page}&count=${count}`, { headers });
+    const res = await fetch(`${BASE_URL}/v1/events?page=${page}&count=${count}`, {
+      headers,
+      signal: AbortSignal.timeout(10_000),
+    });
 
     if (!res.ok) throw new Error(`InterFast events error: ${res.status}`);
 
@@ -87,6 +95,8 @@ export async function fetchRecentEvents(hoursBack = 2): Promise<InterfastEvent[]
     // Se chegámos ao fim da lista
     if (page * count >= data.count) break;
 
+    if (page >= MAX_PAGES) break;
+
     page++;
   }
 
@@ -94,7 +104,10 @@ export async function fetchRecentEvents(hoursBack = 2): Promise<InterfastEvent[]
 }
 
 export async function fetchIntervention(id: string): Promise<InterfastIntervention> {
-  const res = await fetch(`${BASE_URL}/v1/intervention/${id}`, { headers });
+  const res = await fetch(`${BASE_URL}/v1/intervention/${id}`, {
+    headers,
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!res.ok) throw new Error(`InterFast intervention error: ${res.status}`);
   return res.json() as Promise<InterfastIntervention>;
 }

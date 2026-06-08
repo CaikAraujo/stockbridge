@@ -1,8 +1,8 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { rapportImportItems, rapportImports, stockLevels } from '@/db/schema';
+import { rapportImportItems, rapportImports } from '@/db/schema';
 import { adminProcedure, managerProcedure } from '@/server/procedures';
 import { StockMovementService } from '@/server/services/stock-movement.service';
 import { router } from '@/server/trpc';
@@ -103,7 +103,7 @@ export const rapportsRouter = router({
       if (!rapport) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Rapport não encontrado' });
       }
-      if (rapport.status !== 'pending') {
+      if (rapport.status !== 'pending' && rapport.status !== 'partial') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Rapport já processado',
@@ -122,34 +122,24 @@ export const rapportsRouter = router({
       const errors: string[] = [];
 
       for (const item of rapport.items) {
+        if (item.status === 'confirmed' || item.movementId) {
+          skipped++;
+          continue;
+        }
         if (item.status === 'ignored' || !item.articleId) {
           skipped++;
           continue;
         }
 
         try {
-          // Busca saldo actual com FOR UPDATE para evitar race condition
-          const [level] = await ctx.db
-            .select({ quantity: stockLevels.quantity })
-            .from(stockLevels)
-            .where(
-              and(
-                eq(stockLevels.articleId, item.articleId),
-                eq(stockLevels.locationId, rapport.locationId),
-              ),
-            );
-
-          const currentQty = parseFloat(level?.quantity ?? '0');
-          const consumed = parseFloat(item.quantity);
-          const newQty = Math.max(0, currentQty - consumed);
-
-          const movement = await service.createAdjustment({
+          const movement = await service.createConsumption({
             articleId: item.articleId,
             locationId: rapport.locationId,
-            newQuantity: newQty,
+            quantity: parseFloat(item.quantity),
             reason: `Consumo rapport ${rapport.interfastReference ?? rapport.interfastInterventionId}`,
             createdBy: ctx.user.id,
             idempotencyKey: uuidv4(),
+            allowNegative: false,
           });
 
           await ctx.db
@@ -165,7 +155,7 @@ export const rapportsRouter = router({
         }
       }
 
-      const finalStatus = confirmed > 0 ? 'confirmed' : 'partial';
+      const finalStatus = errors.length > 0 ? 'partial' : 'confirmed';
 
       await ctx.db
         .update(rapportImports)

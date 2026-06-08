@@ -400,6 +400,59 @@ export class StockMovementService {
   }
 
   // ================================================================
+  // CONSUMPTION: saída por consumo operacional (rapport InterFast)
+  // ================================================================
+  async createConsumption(params: {
+    articleId: string;
+    locationId: string;
+    quantity: number;
+    reason: string;
+    createdBy: string;
+    idempotencyKey: string;
+    allowNegative?: boolean;
+  }) {
+    if (params.quantity <= 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Quantidade deve ser > 0',
+      });
+    }
+    return await this.db.transaction(async (tx) => {
+      const [level] = await tx
+        .select({ quantity: stockLevels.quantity })
+        .from(stockLevels)
+        .where(
+          and(
+            eq(stockLevels.articleId, params.articleId),
+            eq(stockLevels.locationId, params.locationId),
+          ),
+        )
+        .for('update');
+      const current = parseFloat(level?.quantity ?? '0');
+      if (!params.allowNegative && current < params.quantity) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Estoque insuficiente: disponível ${current.toFixed(3)}, consumo ${params.quantity}`,
+        });
+      }
+      const [movement] = await tx
+        .insert(stockMovements)
+        .values({
+          articleId: params.articleId,
+          locationId: params.locationId,
+          quantityDelta: (-params.quantity).toFixed(3),
+          movementType: 'consumption',
+          reason: params.reason,
+          createdBy: params.createdBy,
+          idempotencyKey: params.idempotencyKey,
+        })
+        .returning();
+      if (!movement) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      return movement;
+    });
+  }
+
+  // ================================================================
   // VOID TRANSFER: estorna todos os movimentos de uma transferência
   // (CORREÇÃO 4)
   // ================================================================

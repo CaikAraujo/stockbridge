@@ -64,47 +64,48 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
         }
       }
 
-      // Cria o rapport import
-      const [rapportImport] = await db
-        .insert(rapportImports)
-        .values({
-          interfastInterventionId: String(event.id),
-          interfastReference: event.reference,
-          technicienName: techName || null,
-          clientName: event.client?.name ?? null,
-          locationId: locationId ?? undefined,
-          interventionDate: intervention.finishDate
-            ? new Date(intervention.finishDate).toISOString().split('T')[0]
-            : null,
-          status: 'pending',
-          rawArticles: rawArticles as unknown as Record<string, unknown>[],
-        })
-        .returning();
+      await db.transaction(async (tx) => {
+        const [rapportImport] = await tx
+          .insert(rapportImports)
+          .values({
+            interfastInterventionId: String(event.id),
+            interfastReference: event.reference,
+            technicienName: techName || null,
+            clientName: event.client?.name ?? null,
+            locationId: locationId ?? undefined,
+            interventionDate: intervention.finishDate
+              ? new Date(intervention.finishDate).toISOString().split('T')[0]
+              : null,
+            status: 'pending',
+            rawArticles: rawArticles as unknown as Record<string, unknown>[],
+          })
+          .onConflictDoNothing({ target: rapportImports.interfastInterventionId })
+          .returning();
 
-      if (!rapportImport) continue;
+        if (!rapportImport) {
+          result.skipped++;
+          return;
+        }
 
-      // Processa cada artigo e tenta match automático
-      for (const article of rawArticles) {
-        const matchedArticle = await matchArticle(article);
+        for (const article of rawArticles) {
+          const matchedArticle = await matchArticle(article);
+          const priceCents = article.price ? parsePriceCents(article.price) : null;
 
-        const priceCents = article.price
-          ? Math.round(parseFloat(article.price.replace(',', '.')) * 100)
-          : null;
+          await tx.insert(rapportImportItems).values({
+            rapportId: rapportImport.id,
+            description: article.name,
+            interfastArticleId: article.articleId || null,
+            supplierCode: article.supplierCode || null,
+            quantity: String(article.quantity),
+            unit: article.unit,
+            priceCents: priceCents ?? undefined,
+            articleId: matchedArticle?.id ?? undefined,
+            status: matchedArticle ? 'matched' : 'unmatched',
+          });
+        }
 
-        await db.insert(rapportImportItems).values({
-          rapportId: rapportImport.id,
-          description: article.name,
-          interfastArticleId: article.articleId || null,
-          supplierCode: article.supplierCode || null,
-          quantity: String(article.quantity),
-          unit: article.unit,
-          priceCents: priceCents ?? undefined,
-          articleId: matchedArticle?.id ?? undefined,
-          status: matchedArticle ? 'matched' : 'unmatched',
-        });
-      }
-
-      result.processed++;
+        result.processed++;
+      });
     } catch (err) {
       result.errors.push(
         `Intervention ${event.id}: ${err instanceof Error ? err.message : String(err)}`,
@@ -115,24 +116,37 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
   return result;
 }
 
+function normalizeName(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function parsePriceCents(raw: string): number | null {
+  const cleaned = raw
+    .trim()
+    .replace(/\s/g, '')
+    .replace(/\.(?=\d{3}(\D|$))/g, '')
+    .replace(',', '.');
+  const n = Number.parseFloat(cleaned);
+  return Number.isFinite(n) ? Math.round(n * 100) : null;
+}
+
 async function matchArticle(article: InterfastArticle): Promise<{ id: string } | null> {
-  // 1. Match exacto por supplierCode → SKU ou barcode
+  // 1. Match exato por supplierCode → SKU ou barcode
   if (article.supplierCode) {
+    const code = article.supplierCode;
     const match = await db.query.articles.findFirst({
-      where: (a, { or: orFn, eq: eqFn }) =>
-        orFn(eqFn(a.sku, article.supplierCode), eqFn(a.barcode, article.supplierCode)),
+      where: (a, { or: orFn, eq: eqFn }) => orFn(eqFn(a.sku, code), eqFn(a.barcode, code)),
       columns: { id: true },
     });
     if (match) return match;
   }
 
-  // 2. Match por nome normalizado (sem acentos, lowercase, só alfanuméricos)
-  const normalized = article.name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]/g, '');
-
+  // 2. Match exato por nome normalizado
+  const normalized = normalizeName(article.name);
   if (normalized.length < 3) return null;
 
   const allArticles = await db.query.articles.findMany({
@@ -140,17 +154,10 @@ async function matchArticle(article: InterfastArticle): Promise<{ id: string } |
     columns: { id: true, name: true },
   });
 
-  for (const a of allArticles) {
-    const aName = a.name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]/g, '');
+  const exact = allArticles.filter((a) => normalizeName(a.name) === normalized);
 
-    if (aName.includes(normalized) || normalized.includes(aName)) {
-      return { id: a.id };
-    }
-  }
-
-  return null;
+  // Só faz match se for único e inequívoco
+  const firstMatch = exact[0];
+  if (exact.length === 1 && firstMatch) return { id: firstMatch.id };
+  return null; // ambíguo ou não encontrado → unmatched
 }
