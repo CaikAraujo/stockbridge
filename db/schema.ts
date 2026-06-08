@@ -575,6 +575,54 @@ export const rapportImportItems = pgTable(
 );
 
 // ============================================================
+// GAS BOTTLES
+// ============================================================
+
+export const gasBottles = pgTable(
+  'gas_bottles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    reference: text('reference').notNull().unique(),
+    gasTypeCode: text('gas_type_code').notNull(),
+    initialWeightKg: numeric('initial_weight_kg', { precision: 8, scale: 3 }).notNull(),
+    currentWeightKg: numeric('current_weight_kg', { precision: 8, scale: 3 }).notNull(),
+    status: text('status').notNull().default('available'),
+    locationId: uuid('location_id').references(() => locations.id),
+    articleId: uuid('article_id').references(() => articles.id),
+    createdBy: uuid('created_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index('gas_bottles_status_idx').on(t.status),
+    locationIdx: index('gas_bottles_location_idx').on(t.locationId),
+  }),
+);
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: text('type').notNull(),
+    title: text('title').notNull(),
+    message: text('message').notNull(),
+    data: jsonb('data').notNull().default({}),
+    status: text('status').notNull().default('unread'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedBy: uuid('resolved_by').references(() => users.id),
+  },
+  (t) => ({
+    statusIdx: index('notifications_status_idx').on(t.status),
+  }),
+);
+
+// ============================================================
 // NOTAS PARA A MIGRATION (executar via SQL raw após `pnpm db:generate`)
 // ============================================================
 //

@@ -1,5 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { rapportImportItems, rapportImports } from '@/db/schema';
+import { gasBottles, notifications, rapportImportItems, rapportImports } from '@/db/schema';
+import { normalizeGasCode } from '@/server/routers/gas-bottles';
 import {
   extractArticles,
   extractTechnicianName,
@@ -102,6 +104,10 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
             articleId: matchedArticle?.id ?? undefined,
             status: matchedArticle ? 'matched' : 'unmatched',
           });
+
+          if (isGasDescription(article.name) && article.unit === 'kg') {
+            await deductGasFromBottle(article.name, article.quantity, locationId, techName ?? null);
+          }
         }
 
         result.processed++;
@@ -132,6 +138,71 @@ function parsePriceCents(raw: string): number | null {
     .replace(',', '.');
   const n = Number.parseFloat(cleaned);
   return Number.isFinite(n) ? Math.round(n * 100) : null;
+}
+
+function isGasDescription(name: string): boolean {
+  const n = name.toLowerCase();
+  return n.includes('gaz') || n.includes('gas') || n.includes('r-') || /r\d{2,3}[a-z]?/i.test(n);
+}
+
+async function deductGasFromBottle(
+  description: string,
+  quantityKg: number,
+  locationId: string | null,
+  technicianName: string | null,
+): Promise<boolean> {
+  if (!locationId) return false;
+
+  const gasCode = normalizeGasCode(description);
+  if (gasCode.length < 2) return false;
+
+  // Procura garrafa em uso primeiro, depois qualquer garrafa disponível no caminhão
+  const bottleInUse = await db.query.gasBottles.findFirst({
+    where: (b, { eq: eqFn, and: andFn }) =>
+      andFn(eqFn(b.locationId, locationId), eqFn(b.gasTypeCode, gasCode), eqFn(b.status, 'in_use')),
+    columns: { id: true, reference: true, name: true, currentWeightKg: true },
+  });
+
+  const bottleFinal =
+    bottleInUse ??
+    (await db.query.gasBottles.findFirst({
+      where: (b, { eq: eqFn, and: andFn }) =>
+        andFn(eqFn(b.locationId, locationId), eqFn(b.gasTypeCode, gasCode)),
+      columns: { id: true, reference: true, name: true, currentWeightKg: true },
+    }));
+
+  if (!bottleFinal) return false;
+
+  const current = parseFloat(bottleFinal.currentWeightKg);
+  const newWeight = Math.max(0, current - quantityKg);
+  const isEmpty = newWeight <= 0;
+
+  await db
+    .update(gasBottles)
+    .set({
+      currentWeightKg: String(newWeight),
+      status: isEmpty ? 'empty' : 'in_use',
+      updatedAt: new Date(),
+    })
+    .where(eq(gasBottles.id, bottleFinal.id));
+
+  if (isEmpty) {
+    await db.insert(notifications).values({
+      type: 'gas_bottle_empty',
+      title: 'Garrafa de gás vazia',
+      message: `A garrafa ${bottleFinal.name} (REF: ${bottleFinal.reference}) do motorista ${technicianName ?? 'desconhecido'} ficou vazia.`,
+      data: {
+        bottleId: bottleFinal.id,
+        reference: bottleFinal.reference,
+        gasType: bottleFinal.name,
+        locationId,
+        technicianName,
+      },
+      status: 'unread',
+    });
+  }
+
+  return true;
 }
 
 async function matchArticle(article: InterfastArticle): Promise<{ id: string } | null> {

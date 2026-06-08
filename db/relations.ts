@@ -2,8 +2,10 @@ import { relations } from 'drizzle-orm';
 import {
   articles,
   categories,
+  gasBottles,
   jobs,
   locations,
+  notifications,
   rapportImportItems,
   rapportImports,
   sessions,
@@ -264,5 +266,35 @@ export const rapportImportItemsRelations = relations(rapportImportItems, ({ one 
   movement: one(stockMovements, {
     fields: [rapportImportItems.movementId],
     references: [stockMovements.id],
+  }),
+}));
+
+// ============================================================
+// GAS BOTTLES
+// ============================================================
+
+export const gasBottlesRelations = relations(gasBottles, ({ one }) => ({
+  location: one(locations, {
+    fields: [gasBottles.locationId],
+    references: [locations.id],
+  }),
+  article: one(articles, {
+    fields: [gasBottles.articleId],
+    references: [articles.id],
+  }),
+  createdByUser: one(users, {
+    fields: [gasBottles.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  resolvedByUser: one(users, {
+    fields: [notifications.resolvedBy],
+    references: [users.id],
   }),
 }));

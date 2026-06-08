@@ -2,9 +2,11 @@
 
 import {
   IconArrowLeftRight,
+  IconBell,
   IconBox,
   IconBriefcase,
   IconClipboardList,
+  IconDroplet,
   IconFileText,
   IconLayoutDashboard,
   IconLayoutSidebarLeftCollapse,
@@ -38,6 +40,8 @@ const NAV_GROUPS = [
       { href: '/rapports', label: 'Rapports', icon: IconFileText },
       { href: '/jobs', label: 'Ordens de serviço', icon: IconBriefcase },
       { href: '/inventory', label: 'Inventário', icon: IconClipboardList },
+      { href: '/gas-bottles', label: 'Garrafas de gás', icon: IconDroplet },
+      { href: '/notifications', label: 'Notificações', icon: IconBell },
     ],
   },
   {
