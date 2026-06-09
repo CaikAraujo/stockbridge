@@ -107,7 +107,13 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
           });
 
           if (isGasDescription(cleanName) && article.unit === 'kg') {
-            await deductGasFromBottle(cleanName, article.quantity, locationId, techName ?? null);
+            await deductGasFromBottle(
+              cleanName,
+              article.quantity,
+              locationId,
+              techName ?? null,
+              tx,
+            );
           }
         }
 
@@ -157,19 +163,24 @@ function isGasDescription(name: string): boolean {
   return n.includes('gaz') || n.includes('gas') || n.includes('r-') || /r\d{2,3}[a-z]?/i.test(n);
 }
 
+type DbOrTx = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+
 async function deductGasFromBottle(
   description: string,
   quantityKg: number,
   locationId: string | null,
   technicianName: string | null,
+  tx?: DbOrTx,
 ): Promise<boolean> {
   if (!locationId) return false;
 
   const gasCode = normalizeGasCode(description);
   if (gasCode.length < 2) return false;
 
+  const client = tx ?? db;
+
   // Procura garrafa em uso primeiro, depois qualquer garrafa disponível no caminhão
-  const bottleInUse = await db.query.gasBottles.findFirst({
+  const bottleInUse = await client.query.gasBottles.findFirst({
     where: (b, { eq: eqFn, and: andFn }) =>
       andFn(eqFn(b.locationId, locationId), eqFn(b.gasTypeCode, gasCode), eqFn(b.status, 'in_use')),
     columns: { id: true, reference: true, name: true, currentWeightKg: true },
@@ -177,7 +188,7 @@ async function deductGasFromBottle(
 
   const bottleFinal =
     bottleInUse ??
-    (await db.query.gasBottles.findFirst({
+    (await client.query.gasBottles.findFirst({
       where: (b, { eq: eqFn, and: andFn }) =>
         andFn(eqFn(b.locationId, locationId), eqFn(b.gasTypeCode, gasCode)),
       columns: { id: true, reference: true, name: true, currentWeightKg: true },
@@ -189,7 +200,7 @@ async function deductGasFromBottle(
   const newWeight = Math.max(0, current - quantityKg);
   const isEmpty = newWeight <= 0;
 
-  await db
+  await client
     .update(gasBottles)
     .set({
       currentWeightKg: String(newWeight),
@@ -199,7 +210,7 @@ async function deductGasFromBottle(
     .where(eq(gasBottles.id, bottleFinal.id));
 
   if (isEmpty) {
-    await db.insert(notifications).values({
+    await client.insert(notifications).values({
       type: 'gas_bottle_empty',
       title: 'Garrafa de gás vazia',
       message: `A garrafa ${bottleFinal.name} (REF: ${bottleFinal.reference}) do motorista ${technicianName ?? 'desconhecido'} ficou vazia.`,

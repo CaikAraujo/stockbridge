@@ -1,6 +1,5 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { rapportImportItems, rapportImports } from '@/db/schema';
 import { adminProcedure, managerProcedure } from '@/server/procedures';
@@ -138,7 +137,7 @@ export const rapportsRouter = router({
             quantity: parseFloat(item.quantity),
             reason: `Consumo rapport ${rapport.interfastReference ?? rapport.interfastInterventionId}`,
             createdBy: ctx.user.id,
-            idempotencyKey: uuidv4(),
+            idempotencyKey: `rapport-item-${item.id}`,
             allowNegative: false,
           });
 

@@ -51,10 +51,15 @@ export default async function LoginPage({
                 redirect('/login?error=RateLimit');
               }
 
+              const safeCallbackUrl =
+                callbackUrl?.startsWith('/') && !callbackUrl.startsWith('//')
+                  ? callbackUrl
+                  : '/dashboard';
+
               try {
                 await signIn('resend', {
                   email,
-                  redirectTo: callbackUrl ?? '/dashboard',
+                  redirectTo: safeCallbackUrl,
                 });
               } catch (err) {
                 if (err instanceof AuthError) {

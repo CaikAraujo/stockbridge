@@ -17,22 +17,24 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       columns: { totpSecret: true },
     });
 
-    if (user?.totpSecret) {
-      const cookieStore = await cookies();
-      const sessionToken =
-        cookieStore.get('authjs.session-token')?.value ??
-        cookieStore.get('__Secure-authjs.session-token')?.value;
+    if (!user?.totpSecret) {
+      redirect('/settings/totp');
+    }
 
-      if (!sessionToken) redirect('/login');
+    const cookieStore = await cookies();
+    const sessionToken =
+      cookieStore.get('authjs.session-token')?.value ??
+      cookieStore.get('__Secure-authjs.session-token')?.value;
 
-      const currentSession = await db.query.sessions.findFirst({
-        where: (s, { eq: eqFn }) => eqFn(s.sessionToken, sessionToken),
-        columns: { totpVerified: true },
-      });
+    if (!sessionToken) redirect('/login');
 
-      if (!currentSession?.totpVerified) {
-        redirect('/login/totp');
-      }
+    const currentSession = await db.query.sessions.findFirst({
+      where: (s, { eq: eqFn }) => eqFn(s.sessionToken, sessionToken),
+      columns: { totpVerified: true },
+    });
+
+    if (!currentSession?.totpVerified) {
+      redirect('/login/totp');
     }
   }
 

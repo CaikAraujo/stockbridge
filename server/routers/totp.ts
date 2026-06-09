@@ -4,6 +4,7 @@ import { generateSecret, generateURI, verifySync } from 'otplib';
 import QRCode from 'qrcode';
 import { z } from 'zod';
 import { sessions, users } from '@/db/schema';
+import { decryptSecret, encryptSecret } from '@/lib/crypto';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { adminProcedure, protectedProcedure } from '@/server/procedures';
 import { router } from '@/server/trpc';
@@ -40,8 +41,11 @@ export const totpRouter = router({
     });
     const qrDataUrl = await QRCode.toDataURL(otpauth);
 
-    // Salva secret temporariamente (ainda não ativado)
-    await ctx.db.update(users).set({ totpSecret: secret }).where(eq(users.id, ctx.user.id));
+    // Salva secret cifrado (ainda não ativado)
+    await ctx.db
+      .update(users)
+      .set({ totpSecret: encryptSecret(secret) })
+      .where(eq(users.id, ctx.user.id));
 
     return { qrDataUrl };
   }),
@@ -60,7 +64,8 @@ export const totpRouter = router({
       });
     }
 
-    const result = verifySync({ token: input.code, secret: user.totpSecret });
+    const plainSecret = decryptSecret(user.totpSecret);
+    const result = verifySync({ token: input.code, secret: plainSecret });
 
     if (!result.valid) {
       throw new TRPCError({
@@ -104,7 +109,8 @@ export const totpRouter = router({
       });
     }
 
-    const result = verifySync({ token: input.code, secret: user.totpSecret });
+    const plainSecret = decryptSecret(user.totpSecret);
+    const result = verifySync({ token: input.code, secret: plainSecret });
 
     if (!result.valid) {
       throw new TRPCError({
@@ -140,7 +146,8 @@ export const totpRouter = router({
       });
     }
 
-    const result = verifySync({ token: input.code, secret: user.totpSecret });
+    const plainSecret = decryptSecret(user.totpSecret);
+    const result = verifySync({ token: input.code, secret: plainSecret });
 
     if (!result.valid) {
       throw new TRPCError({

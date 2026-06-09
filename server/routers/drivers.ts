@@ -131,6 +131,15 @@ export const driversRouter = router({
     .query(async ({ ctx, input }) => {
       const article = await ctx.db.query.articles.findFirst({
         where: (a, { eq: eqFn, and: andFn }) => andFn(eqFn(a.sku, input.sku), eqFn(a.active, true)),
+        columns: {
+          id: true,
+          sku: true,
+          name: true,
+          unit: true,
+          barcode: true,
+          refrigerantType: true,
+          active: true,
+        },
       });
       return article ?? null;
     }),

@@ -36,3 +36,19 @@ export const isAtLeastDriver = isAuthed.unstable_pipe(({ ctx, next }) => {
 
 // alias para compatibilidade — remover quando PWA tiver role exclusiva
 export const isDriver = isAtLeastDriver;
+
+export const isTotpVerified = isAuthed.unstable_pipe(async ({ ctx, next }) => {
+  if (ctx.user.role === 'admin' || ctx.user.role === 'manager') {
+    const token = ctx.sessionToken;
+    const session = token
+      ? await ctx.db.query.sessions.findFirst({
+          where: (x, { eq }) => eq(x.sessionToken, token),
+          columns: { totpVerified: true },
+        })
+      : null;
+    if (!session?.totpVerified) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'TOTP requerido' });
+    }
+  }
+  return next({ ctx });
+});
