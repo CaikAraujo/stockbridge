@@ -301,16 +301,14 @@ export function GasBottlesList({
                       >
                         <IconQrcode size={14} />
                       </button>
-                      {b.status === 'empty' && (
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(b.id)}
-                          title="Eliminar garrafa"
-                          className="rounded p-1 text-text-muted hover:bg-red-50 hover:text-status-critical transition-colors"
-                        >
-                          <IconTrash size={14} />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(b.id)}
+                        title="Eliminar garrafa"
+                        className="rounded p-1 text-text-muted hover:bg-red-50 hover:text-status-critical transition-colors"
+                      >
+                        <IconTrash size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
