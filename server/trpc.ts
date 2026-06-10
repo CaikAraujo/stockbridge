@@ -35,7 +35,12 @@ const t = initTRPC.context<Context>().create({
 
 export const createServerContext = async () => {
   const session = await auth();
-  return { db, session, ip: 'server', userAgent: 'server', sessionToken: null };
+  const cookieStore = await cookies();
+  const sessionToken =
+    cookieStore.get('authjs.session-token')?.value ??
+    cookieStore.get('__Secure-authjs.session-token')?.value ??
+    null;
+  return { db, session, ip: 'server', userAgent: 'server', sessionToken };
 };
 
 export const router = t.router;
