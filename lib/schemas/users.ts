@@ -37,3 +37,7 @@ export const verifyPinSchema = z.object({
     .length(4)
     .regex(/^\d{4}$/),
 });
+
+export const getDriverPinSchema = z.object({
+  userId: z.string().uuid(),
+});

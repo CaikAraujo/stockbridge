@@ -1,5 +1,6 @@
 import 'server-only';
 import { TRPCError } from '@trpc/server';
+import * as argon2 from 'argon2';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { DB } from '@/db/client';
 import { accounts, locations, sessions, users, verificationTokens } from '@/db/schema';
@@ -13,6 +14,11 @@ export interface CreateDriverParams {
 
 export interface DeleteDriverParams {
   userId: string;
+}
+
+export interface SetDriverPinParams {
+  userId: string;
+  pin: string;
 }
 
 export class UserService {
@@ -85,6 +91,52 @@ export class UserService {
 
       return user;
     });
+  }
+
+  async setDriverPin(params: SetDriverPinParams): Promise<{ success: true }> {
+    const user = await this.db.query.users.findFirst({
+      where: (u, { eq: eqFn }) => eqFn(u.id, params.userId),
+      columns: { id: true, role: true },
+    });
+
+    if (!user) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Usuário não encontrado.' });
+    }
+
+    if (user.role !== 'driver') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Só é possível definir PIN para motoristas.',
+      });
+    }
+
+    const hash = await argon2.hash(params.pin);
+    await this.db
+      .update(users)
+      .set({ pinHash: hash, updatedAt: new Date() })
+      .where(eq(users.id, params.userId));
+
+    return { success: true };
+  }
+
+  async getDriverPinStatus(userId: string): Promise<{ hasPIN: boolean }> {
+    const user = await this.db.query.users.findFirst({
+      where: (u, { eq: eqFn }) => eqFn(u.id, userId),
+      columns: { id: true, role: true, pinHash: true },
+    });
+
+    if (!user) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Usuário não encontrado.' });
+    }
+
+    if (user.role !== 'driver') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Consulta de PIN disponível apenas para motoristas.',
+      });
+    }
+
+    return { hasPIN: user.pinHash !== null };
   }
 
   async deleteDriver(params: DeleteDriverParams) {

@@ -9,6 +9,7 @@ import { idempotencySchema } from '@/lib/schemas/common';
 import {
   createDriverSchema,
   deleteDriverSchema,
+  getDriverPinSchema,
   setPinSchema,
   userCreateSchema,
   userUpdateSchema,
@@ -23,7 +24,7 @@ const userService = new UserService(db);
 
 export const usersRouter = router({
   list: adminProcedure.query(async ({ ctx }) => {
-    return ctx.db.query.users.findMany({
+    const rows = await ctx.db.query.users.findMany({
       where: (u, { eq: eqFn }) => eqFn(u.active, true),
       columns: {
         id: true,
@@ -34,9 +35,11 @@ export const usersRouter = router({
         defaultLocationId: true,
         active: true,
         lastLoginAt: true,
+        pinHash: true,
       },
       orderBy: (u, { asc }) => asc(u.name),
     });
+    return rows.map(({ pinHash, ...u }) => ({ ...u, hasPinSet: pinHash !== null }));
   }),
 
   create: adminProcedure
@@ -69,13 +72,16 @@ export const usersRouter = router({
   // Admin define PIN para um motorista
   setPin: adminProcedure
     .input(setPinSchema.merge(idempotencySchema))
-    .mutation(async ({ ctx, input }) => {
-      const hash = await argon2.hash(input.pin);
-      await ctx.db
-        .update(users)
-        .set({ pinHash: hash, updatedAt: new Date() })
-        .where(eq(users.id, input.userId));
-      return { success: true };
+    .mutation(async ({ input }) => {
+      const { idempotencyKey: _k, ...data } = input;
+      return userService.setDriverPin(data);
+    }),
+
+  // Admin consulta se o motorista tem PIN configurado (nunca retorna o hash)
+  getDriverPin: adminProcedure
+    .input(getDriverPinSchema)
+    .query(async ({ input }) => {
+      return userService.getDriverPinStatus(input.userId);
     }),
 
   // Motorista verifica próprio PIN antes de ação sensível
