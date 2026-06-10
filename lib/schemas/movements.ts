@@ -62,3 +62,16 @@ export const adjustSchema = z
     photoUrl: z.string().url().optional(),
   })
   .merge(idempotencySchema);
+
+export const csvImportRowSchema = z.object({
+  nome: z.string().min(1).max(300),
+  quantidade: z.number().positive(),
+  unidade: z.string().min(1).max(10),
+});
+
+export const csvImportSchema = z
+  .object({
+    warehouseId: z.string().uuid(),
+    rows: z.array(csvImportRowSchema).min(1).max(500),
+  })
+  .merge(idempotencySchema);

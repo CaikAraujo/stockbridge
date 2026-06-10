@@ -3,7 +3,9 @@
 import { IconSearch } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { CsvImportDialog } from './csv-import-dialog';
 
 type StockItem = {
   articleId: string;
@@ -65,6 +67,7 @@ export function DepositoView({
   movements: Movement[];
 }) {
   const [search, setSearch] = useState('');
+  const router = useRouter();
 
   if (!warehouse) {
     return (
@@ -92,18 +95,26 @@ export function DepositoView({
               ({items.length} artigos)
             </span>
           </h2>
-          <div className="relative">
-            <IconSearch
-              size={13}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-            />
-            <input
-              type="text"
-              placeholder="Buscar artigo ou SKU..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="rounded-btn border border-surface-border py-1.5 pl-7 pr-3 text-sm focus:border-brand-500 focus:outline-none"
-            />
+          <div className="flex items-center gap-2">
+            {warehouse && (
+              <CsvImportDialog
+                warehouseId={warehouse.id}
+                onSuccess={() => router.refresh()}
+              />
+            )}
+            <div className="relative">
+              <IconSearch
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
+              />
+              <input
+                type="text"
+                placeholder="Buscar artigo ou SKU..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="rounded-btn border border-surface-border py-1.5 pl-7 pr-3 text-sm focus:border-brand-500 focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 

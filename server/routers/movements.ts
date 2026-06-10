@@ -4,7 +4,12 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { articles, locations, stockMovements, users } from '@/db/schema';
 import { idempotencySchema } from '@/lib/schemas/common';
-import { adjustSchema, recentActivitySchema, restockSchema } from '@/lib/schemas/movements';
+import {
+  adjustSchema,
+  csvImportSchema,
+  recentActivitySchema,
+  restockSchema,
+} from '@/lib/schemas/movements';
 import {
   adminProcedure,
   driverProcedure,
@@ -246,6 +251,16 @@ export const movementsRouter = router({
     const { idempotencyKey: _k, ...data } = input;
     return movementService.createAdjustment({
       ...data,
+      createdBy: ctx.user.id,
+      idempotencyKey: input.idempotencyKey,
+    });
+  }),
+
+  // Importação em lote via CSV (admin)
+  importCsv: adminProcedure.input(csvImportSchema).mutation(async ({ ctx, input }) => {
+    return movementService.importCsv({
+      rows: input.rows,
+      warehouseId: input.warehouseId,
       createdBy: ctx.user.id,
       idempotencyKey: input.idempotencyKey,
     });

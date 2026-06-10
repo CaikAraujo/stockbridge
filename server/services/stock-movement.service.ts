@@ -2,7 +2,7 @@ import 'server-only';
 import { TRPCError } from '@trpc/server';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DB } from '@/db/client';
-import { articles, stockLevels, stockMovements, transferItems, transfers } from '@/db/schema';
+import { articles, locations, stockLevels, stockMovements, transferItems, transfers } from '@/db/schema';
 
 export interface WithdrawalParams {
   articleId: string;
@@ -449,6 +449,70 @@ export class StockMovementService {
         .returning();
       if (!movement) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
       return movement;
+    });
+  }
+
+  // ================================================================
+  // IMPORT CSV: cria movimentos 'restock' em lote para o depósito
+  // ================================================================
+  async importCsv(params: {
+    rows: Array<{ nome: string; quantidade: number; unidade: string }>;
+    warehouseId: string;
+    createdBy: string;
+    idempotencyKey: string;
+  }): Promise<{ imported: number; notFound: string[] }> {
+    const warehouse = await this.db.query.locations.findFirst({
+      where: (l, { and: andFn, eq: eqFn }) =>
+        andFn(eqFn(l.id, params.warehouseId), eqFn(l.type, 'warehouse')),
+      columns: { id: true, active: true },
+    });
+
+    if (!warehouse?.active) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Depósito não encontrado ou inativo',
+      });
+    }
+
+    return await this.db.transaction(async (tx) => {
+      const notFound: string[] = [];
+      let imported = 0;
+
+      for (let i = 0; i < params.rows.length; i++) {
+        const row = params.rows[i];
+        if (!row) continue;
+
+        const article = await tx.query.articles.findFirst({
+          where: (a, { and: andFn, eq: eqFn }) =>
+            andFn(eqFn(a.name, row.nome), eqFn(a.active, true)),
+          columns: { id: true, costPriceCents: true },
+        });
+
+        if (!article) {
+          notFound.push(row.nome);
+          continue;
+        }
+
+        const rowKey = `${params.idempotencyKey}-csv-${i}`;
+
+        await tx
+          .insert(stockMovements)
+          .values({
+            articleId: article.id,
+            locationId: params.warehouseId,
+            quantityDelta: row.quantidade.toFixed(3),
+            movementType: 'restock',
+            unitCostCents: article.costPriceCents ?? undefined,
+            notes: `Importação CSV — linha ${i + 1}`,
+            createdBy: params.createdBy,
+            idempotencyKey: rowKey,
+          })
+          .onConflictDoNothing();
+
+        imported++;
+      }
+
+      return { imported, notFound };
     });
   }
 
