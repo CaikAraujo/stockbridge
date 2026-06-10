@@ -6,7 +6,7 @@ const PUBLIC_PATHS = ['/login', '/login/verify', '/login/error', '/login/totp'];
 // Rotas públicas que admins logados ainda podem acessar (step-up TOTP)
 const TOTP_PATH = '/login/totp';
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
