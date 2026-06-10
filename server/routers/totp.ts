@@ -20,7 +20,11 @@ const codeSchema = z.object({
 
 export const totpRouter = router({
   // Gera secret + QR code para o admin escanear
-  setupGenerate: adminProcedure.mutation(async ({ ctx }) => {
+  setupGenerate: protectedProcedure.mutation(async ({ ctx }) => {
+    if (ctx.user.role !== 'admin') {
+      throw new TRPCError({ code: 'FORBIDDEN' });
+    }
+
     const existing = await ctx.db.query.users.findFirst({
       where: (u, { eq: eqFn }) => eqFn(u.id, ctx.user.id),
       columns: { totpSecret: true },
@@ -51,7 +55,11 @@ export const totpRouter = router({
   }),
 
   // Admin confirma leitura do QR digitando o primeiro código — ativa o TOTP
-  setupActivate: adminProcedure.input(codeSchema).mutation(async ({ ctx, input }) => {
+  setupActivate: protectedProcedure.input(codeSchema).mutation(async ({ ctx, input }) => {
+    if (ctx.user.role !== 'admin') {
+      throw new TRPCError({ code: 'FORBIDDEN' });
+    }
+
     const user = await ctx.db.query.users.findFirst({
       where: (u, { eq: eqFn }) => eqFn(u.id, ctx.user.id),
       columns: { totpSecret: true },
