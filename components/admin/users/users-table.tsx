@@ -13,9 +13,11 @@ type User = {
   name: string;
   email: string | null;
   phone: string | null;
-  role: string;
+  role: 'admin' | 'manager' | 'driver';
   active: boolean;
   hasPinSet: boolean;
+  defaultLocationId: string | null;
+  lastLoginAt: Date | null;
 };
 
 const ROLE_LABEL: Record<string, string> = {
