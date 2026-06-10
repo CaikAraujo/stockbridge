@@ -1,10 +1,12 @@
 'use client';
 
-import { IconKey, IconPlus } from '@tabler/icons-react';
+import { IconKey } from '@tabler/icons-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { api } from '@/lib/trpc/client';
+import { CreateDriverDialog } from './create-driver-dialog';
+import { DeleteDriverDialog } from './delete-driver-dialog';
 
 type User = {
   id: string;
@@ -27,38 +29,15 @@ const ROLE_COLOR: Record<string, string> = {
   driver: 'bg-green-50 text-green-700',
 };
 
-type FormState = {
-  name: string;
-  email: string;
-  phone: string;
-  role: 'admin' | 'manager' | 'driver';
-};
-
 export function UsersTable({ initialData }: { initialData: User[] }) {
-  const [showForm, setShowForm] = useState(false);
   const [pinModal, setPinModal] = useState<string | null>(null);
   const [pin, setPin] = useState('');
-  const [form, setForm] = useState<FormState>({
-    name: '',
-    email: '',
-    phone: '',
-    role: 'driver',
+
+  const { data: users, refetch } = api.users.list.useQuery(undefined, {
+    initialData,
   });
 
-  const createUser = api.users.create.useMutation();
   const setPin_m = api.users.setPin.useMutation();
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await createUser.mutateAsync({ ...form, idempotencyKey: uuidv4() });
-      toast.success('Usuário criado com sucesso');
-      setShowForm(false);
-      setForm({ name: '', email: '', phone: '', role: 'driver' });
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Erro ao criar usuário');
-    }
-  };
 
   const handleSetPin = async () => {
     if (!pinModal || pin.length !== 4) return;
@@ -75,103 +54,8 @@ export function UsersTable({ initialData }: { initialData: User[] }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 rounded-btn bg-brand-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600"
-        >
-          <IconPlus size={15} />
-          Novo usuário
-        </button>
+        <CreateDriverDialog onSuccess={() => refetch()} />
       </div>
-
-      {/* Formulário de criação */}
-      {showForm && (
-        <div className="rounded-card border border-surface-border bg-white p-5">
-          <h3 className="mb-4 text-sm font-medium text-text-primary">Novo usuário</h3>
-          <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="user-name"
-                className="mb-1 block text-xs font-medium text-text-secondary"
-              >
-                Nome *
-              </label>
-              <input
-                id="user-name"
-                required
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                className="w-full rounded-btn border border-surface-border px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="user-email"
-                className="mb-1 block text-xs font-medium text-text-secondary"
-              >
-                E-mail
-              </label>
-              <input
-                id="user-email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                className="w-full rounded-btn border border-surface-border px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="user-phone"
-                className="mb-1 block text-xs font-medium text-text-secondary"
-              >
-                Telefone
-              </label>
-              <input
-                id="user-phone"
-                value={form.phone}
-                onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                className="w-full rounded-btn border border-surface-border px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="user-role"
-                className="mb-1 block text-xs font-medium text-text-secondary"
-              >
-                Role *
-              </label>
-              <select
-                id="user-role"
-                value={form.role}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, role: e.target.value as FormState['role'] }))
-                }
-                className="w-full rounded-btn border border-surface-border bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-              >
-                <option value="driver">Motorista</option>
-                <option value="manager">Gerente</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </div>
-            <div className="col-span-2 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="rounded-btn border border-surface-border px-4 py-2 text-sm text-text-secondary hover:bg-surface"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="rounded-btn bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-              >
-                Criar usuário
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Tabela */}
       <div className="overflow-hidden rounded-card border border-surface-border bg-white">
@@ -189,7 +73,7 @@ export function UsersTable({ initialData }: { initialData: User[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-border">
-            {initialData.map((u) => (
+            {users.map((u) => (
               <tr key={u.id} className="transition-colors hover:bg-surface">
                 <td className="px-4 py-2.5 font-medium text-text-primary">{u.name}</td>
                 <td className="px-4 py-2.5 text-text-secondary">{u.email ?? '—'}</td>
@@ -202,22 +86,37 @@ export function UsersTable({ initialData }: { initialData: User[] }) {
                   </span>
                 </td>
                 <td className="px-4 py-2.5">
-                  {u.role === 'driver' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPinModal(u.id);
-                        setPin('');
-                      }}
-                      className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-surface"
-                    >
-                      <IconKey size={13} />
-                      Definir PIN
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {u.role === 'driver' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPinModal(u.id);
+                            setPin('');
+                          }}
+                          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-surface"
+                        >
+                          <IconKey size={13} />
+                          Definir PIN
+                        </button>
+                        <DeleteDriverDialog
+                          driver={{ id: u.id, name: u.name }}
+                          onSuccess={() => refetch()}
+                        />
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-text-muted">
+                  Nenhum usuário encontrado.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

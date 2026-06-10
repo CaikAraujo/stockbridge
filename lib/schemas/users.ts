@@ -8,6 +8,16 @@ export const userCreateSchema = z.object({
   defaultLocationId: z.string().uuid().optional(),
 });
 
+export const createDriverSchema = z.object({
+  name: z.string().min(1, 'Nome obrigatório').max(100),
+  email: z.string().email('E-mail inválido'),
+  truckId: z.string().uuid().optional(),
+});
+
+export const deleteDriverSchema = z.object({
+  userId: z.string().uuid(),
+});
+
 export const userUpdateSchema = userCreateSchema.partial().extend({
   id: z.string().uuid(),
   active: z.boolean().optional(),
