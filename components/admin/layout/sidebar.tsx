@@ -10,9 +10,7 @@ import {
   IconDroplet,
   IconFileText,
   IconLayoutDashboard,
-  IconLayoutSidebarLeftCollapse,
-  IconLayoutSidebarRightCollapse,
-  IconPackage,
+  IconLogout,
   IconSettings,
   IconShield,
   IconShieldLock,
@@ -22,134 +20,146 @@ import {
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { signOut } from 'next-auth/react';
+import type { ComponentType } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { useShell } from './shell-context';
 
-const NAV_GROUPS = [
+type NavItem = { href: string; label: string; icon: ComponentType<{ size?: number }> };
+type NavGroup = { label: string; items: NavItem[] };
+
+const NAV_GROUPS: NavGroup[] = [
   {
+    label: 'Operação',
     items: [
-      { href: '/dashboard', label: 'Dashboard', icon: IconLayoutDashboard },
-      { href: '/deposito', label: 'Depósito', icon: IconBuildingWarehouse },
-      { href: '/trucks', label: 'Caminhões', icon: IconTruck },
-      { href: '/movements', label: 'Movimentações', icon: IconArrowLeftRight },
-      { href: '/transfers', label: 'Transferências', icon: IconTransfer },
+      { href: '/dashboard',   label: 'Dashboard',      icon: IconLayoutDashboard },
+      { href: '/deposito',    label: 'Depósito',        icon: IconBuildingWarehouse },
+      { href: '/trucks',      label: 'Caminhões',       icon: IconTruck },
+      { href: '/movements',   label: 'Movimentações',   icon: IconArrowLeftRight },
+      { href: '/transfers',   label: 'Transferências',  icon: IconTransfer },
     ],
   },
   {
+    label: 'Estoque',
     items: [
-      { href: '/articles', label: 'Artigos', icon: IconBox },
-      { href: '/rapports', label: 'Rapports', icon: IconFileText },
-      { href: '/jobs', label: 'Ordens de serviço', icon: IconBriefcase },
-      { href: '/inventory', label: 'Inventário', icon: IconClipboardList },
+      { href: '/articles',    label: 'Artigos',         icon: IconBox },
+      { href: '/inventory',   label: 'Inventário',      icon: IconClipboardList },
       { href: '/gas-bottles', label: 'Garrafas de gás', icon: IconDroplet },
-      { href: '/notifications', label: 'Notificações', icon: IconBell },
     ],
   },
   {
+    label: 'Serviços',
     items: [
-      { href: '/users', label: 'Usuários', icon: IconUsers },
-      { href: '/audit', label: 'Auditoria', icon: IconShieldLock },
-      { href: '/settings/totp', label: 'Segurança', icon: IconShield },
-      { href: '/settings', label: 'Configurações', icon: IconSettings },
+      { href: '/rapports',    label: 'Rapports',        icon: IconFileText },
+      { href: '/jobs',        label: 'Ordens de serviço', icon: IconBriefcase },
+    ],
+  },
+  {
+    label: 'Sistema',
+    items: [
+      { href: '/users',          label: 'Usuários',      icon: IconUsers },
+      { href: '/audit',          label: 'Auditoria',     icon: IconShieldLock },
+      { href: '/settings/totp',  label: 'Segurança',     icon: IconShield },
+      { href: '/settings',       label: 'Configurações', icon: IconSettings },
+      { href: '/notifications',  label: 'Notificações',  icon: IconBell },
     ],
   },
 ];
 
+function SbLogo() {
+  return (
+    <svg width={34} height={34} viewBox="0 0 40 40" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <defs>
+        <linearGradient id="sbGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="oklch(0.62 0.17 245)" />
+          <stop offset="1" stopColor="oklch(0.46 0.19 262)" />
+        </linearGradient>
+        <linearGradient id="sbFace" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="rgba(255,255,255,0.95)" />
+          <stop offset="1" stopColor="rgba(255,255,255,0.75)" />
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="38" height="38" rx="11" fill="url(#sbGrad)" />
+      <g transform="translate(20 21)">
+        <path d="M0-9.5L8.2-4.75v9.5L0 9.5l-8.2-4.75v-9.5z" fill="none" stroke="url(#sbFace)" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M-8.2-4.75L0 0l8.2-4.75M0 0v9.5" fill="none" stroke="url(#sbFace)" strokeWidth="2" strokeLinejoin="round" />
+        <circle cx="0" cy="0" r="1.6" fill="#fff" />
+      </g>
+    </svg>
+  );
+}
+
 export function AdminSidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-
-  // Persiste preferência
-  useEffect(() => {
-    const stored = localStorage.getItem('sidebar-collapsed');
-    if (stored) setCollapsed(stored === 'true');
-  }, []);
-
-  const toggle = () => {
-    setCollapsed((prev) => {
-      localStorage.setItem('sidebar-collapsed', String(!prev));
-      return !prev;
-    });
-  };
+  const { rail, closeDrawer } = useShell();
 
   return (
     <TooltipProvider delayDuration={200}>
-      <aside
-        className={cn(
-          'flex h-screen flex-col bg-brand-500 transition-all duration-200',
-          collapsed ? 'w-14' : 'w-[220px]',
-        )}
-      >
-        {/* Logo */}
-        <div
-          className={cn(
-            'flex items-center gap-2.5 border-b border-white/10 px-4 py-5',
-            collapsed && 'justify-center px-0',
-          )}
-        >
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-white/20">
-            <IconPackage size={16} className="text-white" />
+      <aside className="sidebar">
+        {/* Brand */}
+        <div className="sb-brand">
+          <SbLogo />
+          <div className="sb-word" style={{ fontFamily: 'var(--font-disp)', fontWeight: 700, fontSize: 17.5, letterSpacing: '-0.02em', color: '#fff' }}>
+            Stock<span style={{ color: 'var(--accent)' }}>Bridge</span>
           </div>
-          {!collapsed && <span className="text-sm font-medium text-white">StockBridge</span>}
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-          {NAV_GROUPS.map((group, gi) => (
-            <div key={group.items[0]?.href ?? gi}>
-              {gi > 0 && <div className="my-1.5 h-px bg-white/10" />}
+        <nav className="sb-nav">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              <div className="sb-group-label">{group.label}</div>
               {group.items.map(({ href, label, icon: Icon }) => {
-                const active = pathname === href || pathname.startsWith(`${href}/`);
-                const item = (
+                const active = pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
+                const link = (
                   <Link
                     key={href}
                     href={href}
-                    className={cn(
-                      'flex items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors',
-                      'text-white/85 hover:bg-white/12 hover:text-white',
-                      active && 'bg-white/18 font-medium text-white',
-                      collapsed && 'justify-center px-0',
-                    )}
+                    onClick={closeDrawer}
+                    className={cn('nav-item', active && 'active')}
                   >
-                    <Icon size={18} className="flex-shrink-0" />
-                    {!collapsed && <span className="truncate">{label}</span>}
+                    <Icon size={19} />
+                    <span className="sb-label">{label}</span>
                   </Link>
                 );
-
-                if (collapsed) {
-                  return (
-                    <Tooltip key={href}>
-                      <TooltipTrigger asChild>{item}</TooltipTrigger>
-                      <TooltipContent side="right">{label}</TooltipContent>
-                    </Tooltip>
-                  );
-                }
-                return item;
+                return rail ? (
+                  <Tooltip key={href}>
+                    <TooltipTrigger asChild>{link}</TooltipTrigger>
+                    <TooltipContent side="right">{label}</TooltipContent>
+                  </Tooltip>
+                ) : link;
               })}
             </div>
           ))}
         </nav>
 
-        {/* Collapse button */}
-        <button
-          type="button"
-          onClick={toggle}
-          className={cn(
-            'flex items-center gap-2.5 border-t border-white/10 px-4 py-3',
-            'text-xs text-white/75 hover:text-white transition-colors',
-            collapsed && 'justify-center px-0',
-          )}
-        >
-          {collapsed ? (
-            <IconLayoutSidebarRightCollapse size={18} />
+        {/* Footer — logout */}
+        <div className="sb-foot">
+          {rail ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="nav-item"
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                >
+                  <IconLogout size={19} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Sair</TooltipContent>
+            </Tooltip>
           ) : (
-            <>
-              <IconLayoutSidebarLeftCollapse size={18} />
-              <span>Minimizar</span>
-            </>
+            <button
+              type="button"
+              className="nav-item"
+              onClick={() => signOut({ callbackUrl: '/login' })}
+            >
+              <IconLogout size={19} />
+              <span className="sb-label">Sair</span>
+            </button>
           )}
-        </button>
+        </div>
       </aside>
     </TooltipProvider>
   );

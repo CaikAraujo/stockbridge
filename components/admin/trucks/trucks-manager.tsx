@@ -1,10 +1,15 @@
 'use client';
 
-import { IconTruck } from '@tabler/icons-react';
+import { IconPlus, IconTruck, IconTruckOff } from '@tabler/icons-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { api } from '@/lib/trpc/client';
+import { EmptyState } from '@/components/admin/shared/empty-state';
+import { MiniBar } from '@/components/admin/shared/mini-bar';
+import { SbAvatar } from '@/components/admin/shared/sb-avatar';
+import { StateBadge } from '@/components/admin/shared/state-badge';
 
 type Truck = {
   id: string;
@@ -19,56 +24,151 @@ type Driver = {
   name: string;
 };
 
+const MAX_ITEMS = 20;
+
 export function TrucksManager({ trucks, drivers }: { trucks: Truck[]; drivers: Driver[] }) {
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving]           = useState<string | null>(null);
+  const [localAssign, setLocalAssign] = useState<Record<string, string | null>>({});
+
   const assignDriver = api.locations.assignDriver.useMutation();
+
+  const getAssignedId = (t: Truck): string | null =>
+    t.id in localAssign ? (localAssign[t.id] ?? null) : t.assignedUser?.id ?? null;
+
+  const getAssignedName = (t: Truck): string | null => {
+    const aid = getAssignedId(t);
+    if (!aid) return null;
+    return drivers.find((d) => d.id === aid)?.name ?? t.assignedUser?.name ?? null;
+  };
 
   const handleAssign = async (locationId: string, userId: string | null) => {
     setSaving(locationId);
+    // Optimistic update
+    setLocalAssign((prev) => ({ ...prev, [locationId]: userId }));
     try {
       await assignDriver.mutateAsync({ locationId, userId, idempotencyKey: uuidv4() });
       toast.success('Motorista atribuído com sucesso');
     } catch (err: unknown) {
+      // Revert optimistic
+      setLocalAssign((prev) => {
+        const next = { ...prev };
+        delete next[locationId];
+        return next;
+      });
       toast.error(err instanceof Error ? err.message : 'Erro ao atribuir motorista');
     } finally {
       setSaving(null);
     }
   };
 
+  if (trucks.length === 0) {
+    return (
+      <div className="card">
+        <EmptyState
+          icon={IconTruck}
+          title="Nenhum caminhão cadastrado"
+          sub="Adicione caminhões para gerir motoristas e estoque a bordo."
+          action={
+            <Link href="/trucks/new" className="btn btn-primary btn-sm">
+              <IconPlus size={14} /> Novo caminhão
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="overflow-hidden rounded-card border border-surface-border bg-white">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-surface-border bg-surface">
-            {['Caminhão', 'Código', 'Placa', 'Motorista atribuído', ''].map((h) => (
-              <th
-                key={h}
-                className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted"
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: 16,
+      }}
+    >
+      {trucks.map((t) => {
+        const driverName = getAssignedName(t);
+        const hasDriver  = !!driverName;
+        const isSaving   = saving === t.id;
+
+        return (
+          <div
+            key={t.id}
+            className="card card-hover"
+            style={{ padding: 'var(--card-pad)' }}
+          >
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 13,
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                  background: hasDriver ? 'var(--primary-soft)' : 'var(--warn-bg)',
+                  color:      hasDriver ? 'var(--primary-strong)' : 'var(--warn-ink)',
+                }}
               >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-surface-border">
-          {trucks.map((t) => (
-            <tr key={t.id} className="transition-colors hover:bg-surface">
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50">
-                    <IconTruck size={15} className="text-brand-500" />
-                  </div>
-                  <span className="font-medium text-text-primary">{t.name}</span>
+                {hasDriver ? <IconTruck size={21} /> : <IconTruckOff size={21} />}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 14.5 }}>{t.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 8 }}>
+                  <span className="mono">{t.code}</span>
+                  {t.plate && <span>Placa {t.plate}</span>}
                 </div>
-              </td>
-              <td className="px-4 py-3 font-mono text-xs text-text-secondary">{t.code}</td>
-              <td className="px-4 py-3 text-text-secondary">{t.plate ?? '—'}</td>
-              <td className="px-4 py-3">
+              </div>
+              {hasDriver
+                ? <StateBadge kind="success" dot>Ativo</StateBadge>
+                : <StateBadge kind="warn" dot>Sem motorista</StateBadge>}
+            </div>
+
+            {/* Items bar — TODO: wire totalItems from getTrucksSummary when available on this page */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                margin: '16px 0 6px',
+                fontSize: 12.5,
+                color: 'var(--muted)',
+                fontWeight: 700,
+              }}
+            >
+              <span>Itens a bordo</span>
+              <Link
+                href={`/trucks/${t.id}`}
+                style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 800, textDecoration: 'none' }}
+              >
+                Ver estoque →
+              </Link>
+            </div>
+            <MiniBar value={0} max={MAX_ITEMS} color="var(--faint)" />
+
+            {/* Driver select */}
+            <div style={{ marginTop: 16 }}>
+              <label
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.07em',
+                  color: 'var(--faint)',
+                  display: 'block',
+                  marginBottom: 6,
+                }}
+              >
+                Motorista atribuído
+              </label>
+              <div className="field" style={{ height: 38 }}>
+                <SbAvatar name={driverName ?? '—'} size={22} />
                 <select
-                  defaultValue={t.assignedUser?.id ?? ''}
+                  value={getAssignedId(t) ?? ''}
                   onChange={(e) => handleAssign(t.id, e.target.value || null)}
-                  disabled={saving === t.id}
-                  className="rounded-btn border border-surface-border bg-white px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none disabled:opacity-50"
+                  disabled={isSaving}
+                  style={{ opacity: isSaving ? 0.6 : 1 }}
                 >
                   <option value="">Sem motorista</option>
                   {drivers.map((d) => (
@@ -77,21 +177,16 @@ export function TrucksManager({ trucks, drivers }: { trucks: Truck[]; drivers: D
                     </option>
                   ))}
                 </select>
-              </td>
-              <td className="px-4 py-3 text-xs text-text-muted">
-                {saving === t.id ? 'Salvando...' : ''}
-              </td>
-            </tr>
-          ))}
-          {trucks.length === 0 && (
-            <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-sm text-text-muted">
-                Nenhum caminhão cadastrado.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+              </div>
+              {isSaving && (
+                <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--muted)' }}>
+                  A salvar…
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

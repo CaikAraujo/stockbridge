@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/layout/sidebar';
+import { AdminShell } from '@/components/admin/layout/shell';
 import { db } from '@/db/client';
 import { auth } from '@/lib/auth/config';
 
@@ -45,9 +46,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface">
+    <AdminShell>
       <AdminSidebar />
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">{children}</div>
-    </div>
+      <div className="main">{children}</div>
+    </AdminShell>
   );
 }

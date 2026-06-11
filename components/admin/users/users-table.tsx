@@ -1,10 +1,14 @@
 'use client';
 
-import { IconKey } from '@tabler/icons-react';
+import { IconKey, IconUsers } from '@tabler/icons-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { api } from '@/lib/trpc/client';
+import { EmptyState } from '@/components/admin/shared/empty-state';
+import { SbAvatar } from '@/components/admin/shared/sb-avatar';
+import { SbTable } from '@/components/admin/shared/sb-table';
+import { StateBadge } from '@/components/admin/shared/state-badge';
 import { CreateDriverDialog } from './create-driver-dialog';
 import { DeleteDriverDialog } from './delete-driver-dialog';
 
@@ -20,36 +24,11 @@ type User = {
   lastLoginAt: Date | null;
 };
 
-const ROLE_LABEL: Record<string, string> = {
-  admin: 'Administrador',
-  manager: 'Gerente',
-  driver: 'Motorista',
-};
-
-const ROLE_COLOR: Record<string, string> = {
-  admin: 'bg-violet-50 text-violet-700',
-  manager: 'bg-blue-50 text-blue-700',
-  driver: 'bg-green-50 text-green-700',
-};
-
-function PinBadge({ hasPinSet }: { hasPinSet: boolean }) {
-  if (hasPinSet) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-        PIN configurado ✓
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-      Sem PIN ⚠
-    </span>
-  );
-}
+type UserRow = Record<string, unknown> & User;
 
 export function UsersTable({ initialData }: { initialData: User[] }) {
   const [pinModal, setPinModal] = useState<string | null>(null);
-  const [pin, setPin] = useState('');
+  const [pin,      setPin]      = useState('');
 
   const utils = api.useUtils();
 
@@ -81,91 +60,106 @@ export function UsersTable({ initialData }: { initialData: User[] }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <CreateDriverDialog onSuccess={() => refetch()} />
       </div>
 
-      {/* Tabela */}
-      <div className="overflow-hidden rounded-card border border-surface-border bg-white">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-surface-border bg-surface">
-              {['Nome', 'E-mail', 'Telefone', 'Role', 'PIN', ''].map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-surface-border">
-            {users.map((u) => {
-              const isPinModalOpen = pinModal === u.id;
-              const currentUser = users.find((x) => x.id === u.id);
-              const hasPinSet = currentUser?.hasPinSet ?? u.hasPinSet;
-
+      <div className="card">
+        <SbTable<UserRow>
+          columns={[
+            { key: 'nome',   label: 'Nome',      width: '1.2fr', wide: true },
+            { key: 'email',  label: 'E-mail',    width: '1.6fr', wide: true },
+            { key: 'tel',    label: 'Telefone',  width: '0.7fr'             },
+            { key: 'role',   label: 'Role',      width: '0.9fr'             },
+            { key: 'pin',    label: 'PIN',       width: '0.8fr'             },
+            { key: 'acoes',  label: '',          width: '190px', align: 'right', wide: true },
+          ]}
+          rows={users as UserRow[]}
+          rowKey={(r) => r.id}
+          empty={
+            <EmptyState
+              icon={IconUsers}
+              title="Nenhum usuário encontrado"
+              sub="Crie o primeiro motorista para começar."
+            />
+          }
+          renderCell={(r, k) => {
+            if (k === 'nome')
               return (
-                <tr key={u.id} className="transition-colors hover:bg-surface">
-                  <td className="px-4 py-2.5 font-medium text-text-primary">{u.name}</td>
-                  <td className="px-4 py-2.5 text-text-secondary">{u.email ?? '—'}</td>
-                  <td className="px-4 py-2.5 text-text-secondary">{u.phone ?? '—'}</td>
-                  <td className="px-4 py-2.5">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLOR[u.role] ?? ''}`}
-                    >
-                      {ROLE_LABEL[u.role] ?? u.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {u.role === 'driver' && <PinBadge hasPinSet={hasPinSet} />}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-1">
-                      {u.role === 'driver' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openPinModal(u.id)}
-                            className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-surface"
-                            aria-pressed={isPinModalOpen}
-                          >
-                            <IconKey size={13} />
-                            {hasPinSet ? 'Alterar PIN' : 'Definir PIN'}
-                          </button>
-                          <DeleteDriverDialog
-                            driver={{ id: u.id, name: u.name }}
-                            onSuccess={() => refetch()}
-                          />
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                  <SbAvatar name={r.name} size={30} />
+                  <b>{r.name}</b>
+                </span>
               );
-            })}
-            {users.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-text-muted">
-                  Nenhum usuário encontrado.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            if (k === 'email')
+              return <span style={{ color: 'var(--ink-2)' }}>{r.email ?? '—'}</span>;
+            if (k === 'tel')
+              return <span style={{ color: 'var(--ink-2)' }}>{r.phone ?? '—'}</span>;
+            if (k === 'role') {
+              if (r.role === 'admin')   return <StateBadge kind="violet">Administrador</StateBadge>;
+              if (r.role === 'manager') return <StateBadge kind="info">Gerente</StateBadge>;
+              return                           <StateBadge kind="success">Motorista</StateBadge>;
+            }
+            if (k === 'pin') {
+              if (r.role !== 'driver') return <span style={{ color: 'var(--faint)' }}>—</span>;
+              return r.hasPinSet
+                ? <StateBadge kind="success">PIN configurado ✓</StateBadge>
+                : <StateBadge kind="warn">Sem PIN ⚠</StateBadge>;
+            }
+            if (k === 'acoes') {
+              if (r.role !== 'driver') return null;
+              return (
+                <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => openPinModal(r.id)}
+                    aria-pressed={pinModal === r.id}
+                  >
+                    <IconKey size={13} />
+                    {r.hasPinSet ? 'Alterar PIN' : 'Definir PIN'}
+                  </button>
+                  <DeleteDriverDialog
+                    driver={{ id: r.id, name: r.name }}
+                    onSuccess={() => refetch()}
+                  />
+                </span>
+              );
+            }
+            return null;
+          }}
+        />
       </div>
 
       {/* Modal de PIN */}
       {pinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-80 rounded-card border border-surface-border bg-white p-6 shadow-xl">
-            <h3 className="mb-1 text-sm font-medium text-text-primary">
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'oklch(0.2 0.04 256 / 0.45)',
+            backdropFilter: 'blur(2px)',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: 320,
+              padding: 24,
+              boxShadow: 'var(--shadow-lg)',
+              animation: 'popIn .2s cubic-bezier(.2,.9,.3,1.2)',
+            }}
+          >
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>
               {users.find((u) => u.id === pinModal)?.hasPinSet ? 'Alterar PIN' : 'Definir PIN'} do
               motorista
             </h3>
-            <p className="mb-4 text-xs text-text-secondary">
+            <p style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 16 }}>
               PIN de 4 dígitos para confirmar operações no PWA. Após salvar, não será possível
               recuperá-lo.
             </p>
@@ -177,21 +171,36 @@ export function UsersTable({ initialData }: { initialData: User[] }) {
               onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
               placeholder="0000"
               autoFocus
-              className="mb-4 w-full rounded-btn border border-surface-border px-3 py-2.5 text-center text-2xl tracking-widest focus:border-brand-500 focus:outline-none"
+              style={{
+                width: '100%',
+                marginBottom: 16,
+                textAlign: 'center',
+                fontSize: 22,
+                letterSpacing: '0.3em',
+                padding: '10px 12px',
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                background: 'var(--surface)',
+                outline: 'none',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
+              onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
             />
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: 10 }}>
               <button
                 type="button"
+                className="btn btn-ghost"
+                style={{ flex: 1 }}
                 onClick={() => setPinModal(null)}
-                className="flex-1 rounded-btn border border-surface-border py-2 text-sm text-text-secondary hover:bg-surface"
               >
                 Cancelar
               </button>
               <button
                 type="button"
+                className="btn btn-primary"
+                style={{ flex: 1 }}
                 onClick={handleSetPin}
                 disabled={pin.length !== 4 || setPin_m.isPending}
-                className="flex-1 rounded-btn bg-brand-500 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-40"
               >
                 {setPin_m.isPending ? 'A salvar…' : 'Salvar PIN'}
               </button>

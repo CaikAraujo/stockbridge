@@ -39,3 +39,6 @@ test-results
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# design handoff (referência, não commitar)
+stockbridge-design/

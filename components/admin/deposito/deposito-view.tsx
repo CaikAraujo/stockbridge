@@ -1,10 +1,14 @@
 'use client';
 
-import { IconSearch } from '@tabler/icons-react';
+import { IconSearch, IconPackage, IconPlus } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { EmptyState } from '@/components/admin/shared/empty-state';
+import { SbTable } from '@/components/admin/shared/sb-table';
+import { StateBadge } from '@/components/admin/shared/state-badge';
 import { CsvImportDialog } from './csv-import-dialog';
 
 type StockItem = {
@@ -37,25 +41,18 @@ function stockStatus(item: StockItem): 'ok' | 'low' | 'critical' {
   return 'ok';
 }
 
-const STATUS_CLASSES = {
-  ok: 'bg-green-50 text-green-700',
-  low: 'bg-amber-50 text-amber-700',
-  critical: 'bg-red-50 text-red-700',
-} as const;
-
-const STATUS_LABEL = {
-  ok: 'OK',
-  low: 'Stock baixo',
-  critical: 'Crítico',
-} as const;
-
-const MOVEMENT_META: Record<string, { label: string; className: string }> = {
-  restock: { label: 'Entrada', className: 'bg-green-50 text-green-700' },
-  transfer_out: { label: 'Retirada', className: 'bg-red-50 text-red-700' },
-  transfer_in: { label: 'Devolução', className: 'bg-blue-50 text-blue-700' },
-  return: { label: 'Devolução', className: 'bg-blue-50 text-blue-700' },
-  adjustment: { label: 'Ajuste', className: 'bg-surface text-text-secondary' },
+const MOVEMENT_META: Record<string, { label: string; kind: 'success' | 'danger' | 'info' | 'neutral' }> = {
+  restock:     { label: 'Entrada',   kind: 'success' },
+  transfer_out:{ label: 'Retirada',  kind: 'danger'  },
+  transfer_in: { label: 'Devolução', kind: 'info'    },
+  return:      { label: 'Devolução', kind: 'info'    },
+  adjustment:  { label: 'Ajuste',    kind: 'neutral' },
+  consumption: { label: 'Consumo',   kind: 'danger'  },
+  initial:     { label: 'Inicial',   kind: 'neutral' },
 };
+
+type StockItemRecord = Record<string, unknown> & StockItem;
+type MovementRecord = Record<string, unknown> & Movement;
 
 export function DepositoView({
   warehouse,
@@ -71,8 +68,12 @@ export function DepositoView({
 
   if (!warehouse) {
     return (
-      <div className="flex items-center justify-center py-16 text-text-muted">
-        <p className="text-sm">Nenhum depósito configurado.</p>
+      <div className="card">
+        <EmptyState
+          icon={IconPackage}
+          title="Nenhum depósito configurado"
+          sub="Configure um depósito para começar a gerir o estoque."
+        />
       </div>
     );
   }
@@ -85,158 +86,146 @@ export function DepositoView({
   );
 
   return (
-    <div className="space-y-6">
-      {/* Secção 1 — Stock actual */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-text-primary">
-            Stock actual
-            <span className="ml-2 text-xs font-normal text-text-muted">
-              ({items.length} artigos)
-            </span>
-          </h2>
-          <div className="flex items-center gap-2">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Stock actual */}
+      <div className="card">
+        <div
+          className="card-head"
+          style={{ paddingBottom: 14, flexWrap: 'wrap', gap: 12 }}
+        >
+          <div>
+            <div className="card-title">
+              Stock actual{' '}
+              <span style={{ color: 'var(--faint)', fontWeight: 600, fontSize: 12.5 }}>
+                ({items.length} artigos)
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             {warehouse && (
-              <CsvImportDialog
-                warehouseId={warehouse.id}
-                onSuccess={() => router.refresh()}
-              />
+              <CsvImportDialog warehouseId={warehouse.id} onSuccess={() => router.refresh()} />
             )}
-            <div className="relative">
-              <IconSearch
-                size={13}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-              />
+            <div className="field" style={{ height: 36, width: 'min(260px, 100%)' }}>
+              <IconSearch size={15} />
               <input
                 type="text"
-                placeholder="Buscar artigo ou SKU..."
+                placeholder="Buscar artigo ou SKU…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="rounded-btn border border-surface-border py-1.5 pl-7 pr-3 text-sm focus:border-brand-500 focus:outline-none"
               />
             </div>
+            <Link
+              href="/movements/new"
+              className="btn btn-primary btn-sm"
+              style={{ gap: 6 }}
+            >
+              <IconPlus size={14} /> Nova entrada
+            </Link>
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-card border border-surface-border bg-white">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-surface-border bg-surface">
-                {['Artigo', 'SKU', 'Unidade', 'Quantidade', 'Estado'].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border">
-              {filtered.map((item) => {
-                const status = stockStatus(item);
-                return (
-                  <tr key={item.articleId} className="hover:bg-surface transition-colors">
-                    <td className="px-4 py-2.5 font-medium text-text-primary">
-                      {item.articleName}
-                    </td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-text-secondary">
-                      {item.articleSku}
-                    </td>
-                    <td className="px-4 py-2.5 text-text-secondary">{item.articleUnit}</td>
-                    <td className="px-4 py-2.5 font-medium text-text-primary">
-                      {parseFloat(item.quantity).toFixed(3)}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[status]}`}
-                      >
-                        {STATUS_LABEL[status]}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-text-muted">
-                    {search ? 'Nenhum artigo encontrado.' : 'Sem artigos em stock.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <SbTable<StockItemRecord>
+          columns={[
+            { key: 'artigo',   label: 'Artigo',    width: '1.4fr', wide: true },
+            { key: 'sku',      label: 'SKU',        width: '1fr'              },
+            { key: 'unidade',  label: 'Unidade',    width: '0.7fr'            },
+            { key: 'qtd',      label: 'Quantidade', width: '0.9fr'            },
+            { key: 'estado',   label: 'Estado',     width: '0.9fr'            },
+          ]}
+          rows={filtered as StockItemRecord[]}
+          rowKey={(r) => r.articleId}
+          empty={
+            <EmptyState
+              icon={IconPackage}
+              title={search ? 'Nenhum artigo encontrado' : 'Sem artigos em stock'}
+              sub={search ? 'Tente outro termo de busca.' : 'Importe um CSV ou crie uma entrada manual.'}
+            />
+          }
+          renderCell={(r, k) => {
+            if (k === 'artigo') return <span style={{ fontWeight: 700 }}>{r.articleName}</span>;
+            if (k === 'sku') return <span className="mono" style={{ color: 'var(--primary)' }}>{r.articleSku}</span>;
+            if (k === 'unidade') return <StateBadge kind="neutral">{r.articleUnit}</StateBadge>;
+            if (k === 'qtd') return <span style={{ fontWeight: 700 }}>{parseFloat(r.quantity).toFixed(3)}</span>;
+            if (k === 'estado') {
+              const st = stockStatus(r);
+              if (st === 'critical') return <StateBadge kind="danger" dot>Crítico</StateBadge>;
+              if (st === 'low')      return <StateBadge kind="warn"   dot>Stock baixo</StateBadge>;
+              return                        <StateBadge kind="success" dot>OK</StateBadge>;
+            }
+            return null;
+          }}
+        />
       </div>
 
-      {/* Secção 2 — Histórico recente */}
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-text-primary">
-          Histórico recente
-          <span className="ml-2 text-xs font-normal text-text-muted">(últimos 50)</span>
-        </h2>
-
-        <div className="overflow-hidden rounded-card border border-surface-border bg-white">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-surface-border bg-surface">
-                {['Data/hora', 'Artigo', 'Quantidade', 'Tipo', 'Operador'].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border">
-              {movements.map((m) => {
-                const meta = MOVEMENT_META[m.movementType] ?? {
-                  label: m.movementType,
-                  className: 'bg-surface text-text-muted',
-                };
-                const voided = m.voidedAt !== null;
-                const delta = parseFloat(m.quantityDelta);
-
-                return (
-                  <tr
-                    key={m.id}
-                    className={`transition-colors hover:bg-surface ${voided ? 'opacity-50' : ''}`}
-                  >
-                    <td
-                      className={`px-4 py-2.5 text-xs text-text-secondary ${voided ? 'line-through' : ''}`}
-                    >
-                      {format(new Date(m.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                    </td>
-                    <td className={`px-4 py-2.5 text-text-primary ${voided ? 'line-through' : ''}`}>
-                      {m.articleName}
-                    </td>
-                    <td className="px-4 py-2.5 font-medium text-text-primary">
-                      {delta > 0 ? '+' : ''}
-                      {delta.toFixed(3)} {m.articleUnit}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${meta.className}`}
-                      >
-                        {meta.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-text-secondary">{m.userName}</td>
-                  </tr>
-                );
-              })}
-              {movements.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-text-muted">
-                    Sem movimentos recentes.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* Histórico recente */}
+      <div className="card">
+        <div className="card-head" style={{ paddingBottom: 14 }}>
+          <div className="card-title">
+            Histórico recente{' '}
+            <span style={{ color: 'var(--faint)', fontWeight: 600, fontSize: 12.5 }}>
+              (últimos 50)
+            </span>
+          </div>
         </div>
+
+        <SbTable<MovementRecord>
+          columns={[
+            { key: 'dt',     label: 'Data/Hora',  width: '1.1fr'            },
+            { key: 'artigo', label: 'Artigo',     width: '1.2fr', wide: true },
+            { key: 'qtd',    label: 'Quantidade', width: '0.9fr'            },
+            { key: 'tipo',   label: 'Tipo',       width: '0.8fr'            },
+            { key: 'op',     label: 'Operador',   width: '0.8fr'            },
+          ]}
+          rows={movements as MovementRecord[]}
+          rowKey={(r) => r.id}
+          empty={
+            <EmptyState
+              icon={IconPackage}
+              title="Sem movimentos recentes"
+              sub="As movimentações do depósito aparecerão aqui."
+            />
+          }
+          renderCell={(r, k) => {
+            if (k === 'dt')
+              return (
+                <span className="mono" style={{ color: 'var(--muted)' }}>
+                  {format(new Date(r.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                </span>
+              );
+            if (k === 'artigo')
+              return (
+                <span
+                  style={{
+                    fontWeight: 700,
+                    opacity: r.voidedAt ? 0.45 : 1,
+                    textDecoration: r.voidedAt ? 'line-through' : 'none',
+                  }}
+                >
+                  {r.articleName}
+                </span>
+              );
+            if (k === 'qtd') {
+              const delta = parseFloat(r.quantityDelta);
+              return (
+                <span
+                  style={{
+                    fontWeight: 800,
+                    color: delta > 0 ? 'var(--success-ink)' : 'var(--danger-ink)',
+                  }}
+                >
+                  {delta > 0 ? '+' : ''}
+                  {delta.toFixed(3)} {r.articleUnit}
+                </span>
+              );
+            }
+            if (k === 'tipo') {
+              const meta = MOVEMENT_META[r.movementType] ?? { label: r.movementType, kind: 'neutral' as const };
+              return <StateBadge kind={meta.kind}>{meta.label}</StateBadge>;
+            }
+            if (k === 'op') return <span style={{ color: 'var(--ink-2)' }}>{r.userName}</span>;
+            return null;
+          }}
+        />
       </div>
     </div>
   );

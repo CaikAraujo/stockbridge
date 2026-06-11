@@ -1,11 +1,14 @@
 'use client';
 
-import { IconEdit, IconPlus, IconPrinter, IconSearch, IconTrash } from '@tabler/icons-react';
+import { IconEdit, IconPackage, IconPlus, IconPrinter, IconSearch, IconTrash } from '@tabler/icons-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { generateQRLabelsPDF } from '@/lib/qr-pdf';
 import { api } from '@/lib/trpc/client';
+import { EmptyState } from '@/components/admin/shared/empty-state';
+import { SbTable } from '@/components/admin/shared/sb-table';
+import { StateBadge } from '@/components/admin/shared/state-badge';
 
 type Article = {
   id: string;
@@ -25,11 +28,13 @@ type ArticlesListResult = {
   total: number;
 };
 
+type ArtRow = Record<string, unknown> & Article;
+
 export function ArticlesTable({ initialData }: { initialData: ArticlesListResult }) {
-  const [search, setSearch] = useState('');
+  const [search,   setSearch]   = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [printing, setPrinting] = useState(false);
-  const [data, setData] = useState(initialData);
+  const [data,     setData]     = useState(initialData);
 
   const deleteArticle = api.articles.delete.useMutation();
 
@@ -59,7 +64,6 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
   const handlePrint = async () => {
     const toPrint = filtered.filter((a) => selected.has(a.id));
     if (toPrint.length === 0) return;
-
     setPrinting(true);
     try {
       await generateQRLabelsPDF(
@@ -97,136 +101,137 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
   const allSelected = selected.size === filtered.length && filtered.length > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="card">
       {/* Barra de ações */}
-      <div className="flex items-center gap-3">
-        <div className="relative max-w-sm flex-1">
-          <IconSearch
-            size={14}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-          />
-          <input
-            type="text"
-            placeholder="Buscar artigo ou SKU..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-btn border border-surface-border py-2 pl-8 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none"
-          />
+      <div
+        className="card-head"
+        style={{ paddingBottom: 14, flexWrap: 'wrap', gap: 12 }}
+      >
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="field" style={{ height: 36, width: 'min(320px, 100%)' }}>
+            <IconSearch size={15} />
+            <input
+              type="text"
+              placeholder="Buscar artigo ou SKU…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {selected.size > 0 && (
+            <button
+              type="button"
+              onClick={handlePrint}
+              disabled={printing}
+              className="btn btn-soft btn-sm"
+            >
+              <IconPrinter size={14} />
+              {printing ? 'Gerando…' : `Imprimir etiquetas (${selected.size})`}
+            </button>
+          )}
         </div>
-
-        {selected.size > 0 && (
-          <button
-            type="button"
-            onClick={handlePrint}
-            disabled={printing}
-            className="flex items-center gap-1.5 rounded-btn bg-brand-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-50"
-          >
-            <IconPrinter size={15} />
-            {printing ? 'Gerando...' : `Imprimir etiquetas (${selected.size})`}
-          </button>
-        )}
-
-        <Link
-          href="/articles/new"
-          className="flex items-center gap-1.5 rounded-btn border border-surface-border bg-white px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface"
-        >
-          <IconPlus size={15} />
-          Novo artigo
-        </Link>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>
+            {filtered.length} de {data.total} artigos
+          </span>
+          <Link href="/articles/new" className="btn btn-primary btn-sm" style={{ gap: 6 }}>
+            <IconPlus size={14} /> Novo artigo
+          </Link>
+        </div>
       </div>
 
-      {/* Tabela */}
-      <div className="overflow-hidden rounded-card border border-surface-border bg-white">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-surface-border bg-surface">
-              <th className="w-10 px-4 py-2.5">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  className="rounded"
-                />
-              </th>
-              {['SKU', 'Nome', 'Unidade', 'Mín.', 'Reposição', 'Tipo gás', '', ''].map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted"
+      {/* Checkbox header row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '8px var(--card-pad) 0',
+          borderBottom: '1px solid var(--border-soft)',
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={allSelected}
+          onChange={toggleAll}
+          style={{ flexShrink: 0 }}
+        />
+        <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--faint)' }}>
+          {selected.size > 0 ? `${selected.size} selecionados` : 'Selecionar todos'}
+        </span>
+      </div>
+
+      <SbTable<ArtRow>
+        columns={[
+          { key: 'sel',  label: '',          width: '36px'                 },
+          { key: 'sku',  label: 'SKU',        width: '0.9fr'               },
+          { key: 'nome', label: 'Nome',       width: '1.2fr', wide: true   },
+          { key: 'un',   label: 'Unidade',    width: '0.7fr'               },
+          { key: 'min',  label: 'Mín.',       width: '0.7fr'               },
+          { key: 'rep',  label: 'Reposição',  width: '0.8fr'               },
+          { key: 'gas',  label: 'Tipo gás',   width: '0.7fr'               },
+          { key: 'acoes',label: '',           width: '110px', align: 'right', wide: true },
+        ]}
+        rows={filtered as ArtRow[]}
+        rowKey={(r) => r.id}
+        empty={
+          <EmptyState
+            icon={IconPackage}
+            title={search ? 'Nenhum artigo encontrado' : 'Nenhum artigo cadastrado'}
+            sub={search ? 'Tente outro termo de busca.' : 'Crie o primeiro artigo do catálogo.'}
+            action={
+              !search ? (
+                <Link href="/articles/new" className="btn btn-primary btn-sm">
+                  <IconPlus size={14} /> Novo artigo
+                </Link>
+              ) : undefined
+            }
+          />
+        }
+        renderCell={(r, k) => {
+          if (k === 'sel')
+            return (
+              <input
+                type="checkbox"
+                checked={selected.has(r.id)}
+                onChange={() => toggleSelect(r.id)}
+              />
+            );
+          if (k === 'sku')
+            return <span className="mono" style={{ color: 'var(--primary)' }}>{r.sku}</span>;
+          if (k === 'nome')
+            return <span style={{ fontWeight: 700 }}>{r.name}</span>;
+          if (k === 'un')
+            return <StateBadge kind="info">{r.unit}</StateBadge>;
+          if (k === 'min')
+            return <span style={{ color: 'var(--ink-2)' }}>{parseFloat(r.minStock).toFixed(3)}</span>;
+          if (k === 'rep')
+            return <span style={{ color: 'var(--ink-2)' }}>{parseFloat(r.reorderPoint).toFixed(3)}</span>;
+          if (k === 'gas')
+            return <span style={{ color: 'var(--ink-2)' }}>{r.refrigerantType ?? '—'}</span>;
+          if (k === 'acoes')
+            return (
+              <span style={{ display: 'inline-flex', gap: 4 }}>
+                <Link
+                  href={`/articles/${r.id}/edit`}
+                  className="btn btn-icon btn-ghost btn-sm"
+                  title="Editar"
                 >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-surface-border">
-            {filtered.map((a) => (
-              <tr
-                key={a.id}
-                className={`transition-colors hover:bg-surface ${selected.has(a.id) ? 'bg-brand-50' : ''}`}
-              >
-                <td className="px-4 py-2.5">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(a.id)}
-                    onChange={() => toggleSelect(a.id)}
-                    className="rounded"
-                  />
-                </td>
-                <td className="px-4 py-2.5 font-mono text-xs text-text-secondary">{a.sku}</td>
-                <td className="px-4 py-2.5 font-medium text-text-primary">{a.name}</td>
-                <td className="px-4 py-2.5">
-                  <span className="rounded bg-surface px-1.5 py-0.5 text-xs text-text-secondary">
-                    {a.unit}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5 text-text-secondary">
-                  {parseFloat(a.minStock).toFixed(3)}
-                </td>
-                <td className="px-4 py-2.5 text-text-secondary">
-                  {parseFloat(a.reorderPoint).toFixed(3)}
-                </td>
-                <td className="px-4 py-2.5 text-text-secondary">{a.refrigerantType ?? '—'}</td>
-                <td className="px-4 py-2.5">
-                  <Link
-                    href={`/articles/${a.id}/edit`}
-                    className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-surface"
-                  >
-                    <IconEdit size={13} />
-                    Editar
-                  </Link>
-                </td>
-                <td className="px-4 py-2.5">
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(a.id, a.name)}
-                    disabled={deleteArticle.isPending}
-                    title="Eliminar artigo"
-                    className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-red-50 hover:text-status-critical disabled:opacity-50"
-                  >
-                    <IconTrash size={13} />
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-sm text-text-muted">
-                  {search
-                    ? 'Nenhum artigo encontrado para esta busca.'
-                    : 'Nenhum artigo cadastrado.'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="text-xs text-text-muted">
-        {filtered.length} de {initialData.total} artigos
-      </p>
+                  <IconEdit size={14} />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(r.id, r.name)}
+                  disabled={deleteArticle.isPending}
+                  className="btn btn-icon btn-danger-ghost btn-sm"
+                  title="Eliminar artigo"
+                >
+                  <IconTrash size={14} />
+                </button>
+              </span>
+            );
+          return null;
+        }}
+      />
     </div>
   );
 }

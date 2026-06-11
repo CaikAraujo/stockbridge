@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { MiniBar } from '@/components/admin/shared/mini-bar';
+import { StateBadge } from '@/components/admin/shared/state-badge';
 
 interface Truck {
   id: string;
@@ -15,58 +17,124 @@ interface Props {
   trucks: Truck[];
 }
 
+const MAX_ITEMS = 20;
+
 export function TruckList({ trucks }: Props) {
   return (
-    <div className="rounded-card border border-surface-border bg-white">
-      <div className="flex items-center justify-between border-b border-surface-border px-4 py-3">
-        <h2 className="text-sm font-medium text-text-primary">Saldo por caminhão</h2>
-        <Link href="/trucks" className="text-xs font-medium text-brand-500 hover:underline">
+    <div className="card">
+      <div className="card-head">
+        <div>
+          <div className="card-title">Saldo por caminhão</div>
+          <div className="card-sub">Itens a bordo agora</div>
+        </div>
+        <Link
+          href="/trucks"
+          style={{
+            background: 'transparent',
+            color: 'var(--primary)',
+            fontWeight: 800,
+            fontSize: 13,
+            textDecoration: 'none',
+          }}
+        >
           Ver todos →
         </Link>
       </div>
 
-      <div className="divide-y divide-surface-border">
-        {trucks.map((t) => (
-          <Link
-            key={t.id}
-            href={`/trucks/${t.id}`}
-            className="flex items-center justify-between px-4 py-2.5 hover:bg-surface transition-colors"
-          >
-            <div className="flex items-center gap-2.5">
-              <div
-                className={`h-2 w-2 rounded-full flex-shrink-0 ${
-                  t.lowCount > 0 ? 'bg-status-low' : 'bg-status-ok'
-                }`}
+      <div style={{ padding: 'calc(var(--card-pad) - 8px) var(--card-pad) var(--card-pad)' }}>
+        {trucks.map((t, i) => {
+          const hasDriver = !!t.assignedUser;
+          const isLast = i === trucks.length - 1;
+          return (
+            <Link
+              key={t.id}
+              href={`/trucks/${t.id}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '9px 0',
+                borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                textDecoration: 'none',
+                color: 'inherit',
+              }}
+            >
+              <span
+                style={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: 99,
+                  flexShrink: 0,
+                  background: hasDriver ? 'var(--success)' : 'var(--faint)',
+                  boxShadow: hasDriver ? '0 0 0 3px var(--success-bg)' : 'none',
+                }}
               />
-              <div>
-                <p className="text-sm font-medium text-text-primary">{t.name}</p>
-                <p className="text-xs text-text-secondary">
-                  {t.assignedUser?.name ?? '—'} · {t.code}
-                </p>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>{t.name}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+                  {t.assignedUser?.name ?? 'Sem motorista'} ·{' '}
+                  <span className="mono">{t.code}</span>
+                </div>
               </div>
-            </div>
-
-            <div className="text-right">
-              <p
-                className={`text-sm font-medium ${
-                  t.lowCount > 0 ? 'text-status-low' : 'text-text-primary'
-                }`}
+              <div
+                style={{
+                  width: 90,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                  alignItems: 'flex-end',
+                }}
               >
-                {t.totalItems} itens
-              </p>
-              {t.lowCount > 0 && (
-                <p className="text-2xs text-status-low">{t.lowCount} abaixo do mínimo</p>
-              )}
-            </div>
-          </Link>
-        ))}
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: t.lowCount > 0 ? 'var(--danger-ink)' : 'var(--ink)',
+                  }}
+                >
+                  {t.totalItems} {t.totalItems === 1 ? 'item' : 'itens'}
+                </span>
+                <div style={{ width: '100%' }}>
+                  <MiniBar
+                    value={t.totalItems}
+                    max={MAX_ITEMS}
+                    color={t.lowCount > 0 ? 'var(--danger)' : 'var(--primary)'}
+                  />
+                </div>
+              </div>
+            </Link>
+          );
+        })}
 
         {trucks.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-text-muted">
+          <p
+            style={{
+              padding: '24px 0',
+              textAlign: 'center',
+              fontSize: 13,
+              color: 'var(--muted)',
+            }}
+          >
             Nenhum caminhão cadastrado.
           </p>
         )}
       </div>
+
+      {trucks.some((t) => t.lowCount > 0) && (
+        <div
+          style={{
+            padding: '10px var(--card-pad)',
+            borderTop: '1px solid var(--border-soft)',
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+          }}
+        >
+          <StateBadge kind="danger" dot>
+            {trucks.filter((t) => t.lowCount > 0).length} caminhão(ões) com estoque baixo
+          </StateBadge>
+        </div>
+      )}
     </div>
   );
 }

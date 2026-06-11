@@ -1,34 +1,100 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./components.css";
 
 /* ============================================================
-   Shadcn/ui CSS variables (referenciaveis via @theme inline)
+   StockBridge — Design Tokens (redesign 2026)
+   Direção: azul-marinho evoluído, vivo, refinado.
    ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #111827;
-  --card: #ffffff;
-  --card-foreground: #111827;
-  --popover: #ffffff;
-  --popover-foreground: #111827;
-  --primary: #064875;
-  --primary-foreground: #ffffff;
-  --secondary: #f0f3f7;
-  --secondary-foreground: #111827;
-  --muted: #f0f3f7;
-  --muted-foreground: #4b5563;
-  --accent: #e0efff;
-  --accent-foreground: #064875;
-  --destructive: #dc2626;
+  /* ---- Brand core ---- */
+  --primary:        oklch(0.55 0.19 256);
+  --primary-strong: oklch(0.47 0.18 257);
+  --primary-soft:   oklch(0.94 0.03 252);
+  --primary-softer: oklch(0.965 0.018 252);
+  --on-primary:     #ffffff;
+  --accent:         oklch(0.78 0.13 210);
+
+  /* ---- Sidebar (navy) ---- */
+  --navy-950:      oklch(0.17 0.045 258);
+  --navy-900:      oklch(0.21 0.055 256);
+  --navy-800:      oklch(0.26 0.06 254);
+  --navy-line:     oklch(0.32 0.05 254 / 0.55);
+  --navy-text:     oklch(0.78 0.03 250);
+  --navy-text-dim: oklch(0.62 0.035 252);
+
+  /* ---- Neutrals ---- */
+  --bg:          oklch(0.966 0.007 250);
+  --surface:     #ffffff;
+  --surface-2:   oklch(0.975 0.005 250);
+  --ink:         oklch(0.26 0.035 256);
+  --ink-2:       oklch(0.45 0.025 254);
+  --muted:       oklch(0.58 0.02 252);
+  --faint:       oklch(0.70 0.015 252);
+  --border:      oklch(0.905 0.012 250);
+  --border-soft: oklch(0.935 0.009 250);
+
+  /* ---- Semantics ---- */
+  --success:     oklch(0.60 0.14 155);
+  --success-bg:  oklch(0.95 0.045 155);
+  --success-ink: oklch(0.42 0.12 155);
+  --warn:        oklch(0.74 0.15 75);
+  --warn-bg:     oklch(0.96 0.055 85);
+  --warn-ink:    oklch(0.50 0.13 65);
+  --danger:      oklch(0.58 0.21 25);
+  --danger-bg:   oklch(0.955 0.035 25);
+  --danger-ink:  oklch(0.50 0.19 25);
+  --info-bg:     oklch(0.95 0.03 240);
+  --info-ink:    oklch(0.48 0.14 250);
+  --violet:      oklch(0.55 0.19 295);
+  --violet-bg:   oklch(0.95 0.04 295);
+  --violet-ink:  oklch(0.46 0.17 295);
+  --cyan-ink:    oklch(0.50 0.11 215);
+  --cyan-bg:     oklch(0.945 0.04 210);
+
+  /* ---- Typography (resolvida via next/font/google) ---- */
+  --font-ui:   var(--font-manrope, 'Manrope'), system-ui, sans-serif;
+  --font-disp: var(--font-space-grotesk, 'Space Grotesk'), 'Manrope', sans-serif;
+  --font-code: var(--font-jetbrains-mono, 'JetBrains Mono'), ui-monospace, monospace;
+
+  /* ---- Geometry ---- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --shadow-sm: 0 1px 2px oklch(0.3 0.04 256 / 0.05), 0 1px 1px oklch(0.3 0.04 256 / 0.03);
+  --shadow-md: 0 2px 6px oklch(0.3 0.04 256 / 0.06), 0 8px 24px -8px oklch(0.3 0.04 256 / 0.10);
+  --shadow-lg: 0 4px 12px oklch(0.3 0.05 256 / 0.10), 0 20px 48px -12px oklch(0.3 0.05 256 / 0.18);
+  --sidebar-w:      260px;
+  --sidebar-w-rail: 76px;
+  --topbar-h:       64px;
+  --cell-py:        13px;
+  --card-pad:       20px;
+
+  /* ---- shadcn/ui — mapeamento de compatibilidade ---- */
+  --background:             var(--bg);
+  --foreground:             var(--ink);
+  --card:                   var(--surface);
+  --card-foreground:        var(--ink);
+  --popover:                var(--surface);
+  --popover-foreground:     var(--ink);
+  --primary-foreground:     var(--on-primary);
+  --secondary:              var(--surface-2);
+  --secondary-foreground:   var(--ink-2);
+  --muted-bg:               var(--surface-2);
+  --muted-foreground:       var(--muted);
+  --accent-soft:            var(--primary-soft);
+  --accent-foreground:      var(--primary-strong);
+  --destructive:            var(--danger);
   --destructive-foreground: #ffffff;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #064875;
-  --radius: 0.5rem;
+  --input:                  var(--border);
+  --ring:                   var(--primary);
+  --radius:                 var(--r-sm);
 }
 
-/* Tailwind v4: inline = usa vars CSS existentes, não gera novas no :root */
+/* Tailwind v4 @theme inline → usa vars CSS existentes, não cria novas em :root */
 @theme inline {
+  /* shadcn compat */
   --color-background:           var(--background);
   --color-foreground:           var(--foreground);
   --color-card:                 var(--card);
@@ -39,74 +105,98 @@
   --color-primary-foreground:   var(--primary-foreground);
   --color-secondary:            var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted:                var(--muted);
+  --color-muted:                var(--muted-bg);
   --color-muted-foreground:     var(--muted-foreground);
-  --color-accent:               var(--accent);
+  --color-accent:               var(--accent-soft);
   --color-accent-foreground:    var(--accent-foreground);
   --color-destructive:          var(--destructive);
   --color-border:               var(--border);
   --color-input:                var(--input);
   --color-ring:                 var(--ring);
-  --font-sans:                  var(--font-geist-sans);
-  --font-mono:                  var(--font-geist-mono);
-  /* Raio base para componentes shadcn */
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
-  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Design tokens como utilitários Tailwind */
+  --color-primary-strong:  var(--primary-strong);
+  --color-primary-soft:    var(--primary-soft);
+  --color-primary-softer:  var(--primary-softer);
+  --color-bg:              var(--bg);
+  --color-surface:         var(--surface);
+  --color-surface-2:       var(--surface-2);
+  --color-ink:             var(--ink);
+  --color-ink-2:           var(--ink-2);
+  --color-faint:           var(--faint);
+  --color-border-soft:     var(--border-soft);
+  --color-navy-950:        var(--navy-950);
+  --color-navy-900:        var(--navy-900);
+  --color-navy-800:        var(--navy-800);
+  --color-navy-text:       var(--navy-text);
+  --color-navy-text-dim:   var(--navy-text-dim);
+  --color-success:         var(--success);
+  --color-success-bg:      var(--success-bg);
+  --color-success-ink:     var(--success-ink);
+  --color-warn:            var(--warn);
+  --color-warn-bg:         var(--warn-bg);
+  --color-warn-ink:        var(--warn-ink);
+  --color-danger:          var(--danger);
+  --color-danger-bg:       var(--danger-bg);
+  --color-danger-ink:      var(--danger-ink);
+  --color-info-bg:         var(--info-bg);
+  --color-info-ink:        var(--info-ink);
+  --color-violet-bg:       var(--violet-bg);
+  --color-violet-ink:      var(--violet-ink);
+  --color-cyan-bg:         var(--cyan-bg);
+  --color-cyan-ink:        var(--cyan-ink);
+
+  /* Fontes */
+  --font-sans:    var(--font-ui);
+  --font-display: var(--font-disp);
+  --font-mono:    var(--font-code);
+
+  /* Raios */
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
 }
 
-/* ============================================================
-   StockBridge design tokens — Passo 2
-   @theme (não inline) → gera utilitários E variáveis no :root
-   ============================================================ */
+/* Escala tipográfica compacta (admin desktop) e layout */
 @theme {
-  /* Paleta brand */
-  --color-brand-50:  #f0f7ff;
-  --color-brand-100: #e0efff;
-  --color-brand-200: #bfdbfe;
-  --color-brand-400: #0d6eae;
-  --color-brand-500: #064875;
-  --color-brand-600: #053d63;
-  --color-brand-700: #042f4d;
-
-  /* Superfície */
-  --color-surface:        #f0f3f7;
-  --color-surface-card:   #ffffff;
-  --color-surface-border: #e5e7eb;
-
-  /* Texto */
-  --color-text-primary:   #111827;
-  --color-text-secondary: #4b5563;
-  --color-text-muted:     #9ca3af;
-
-  /* Status */
-  --color-status-ok:       #16a34a;
-  --color-status-low:      #d97706;
-  --color-status-critical: #dc2626;
-
-  /* Border radius customizados */
-  --radius-card: 10px;
-  --radius-btn:   7px;
-  --radius-tag:   5px;
-
-  /* Escala tipográfica compacta (admin desktop) */
-  --text-2xs:                10px;
-  --text-2xs--line-height:   14px;
-  --text-xs:                 11px;
-  --text-xs--line-height:    16px;
-  --text-sm:                 12px;
-  --text-sm--line-height:    17px;
-  --text-base:               13px;
-  --text-base--line-height:  19px;
-
-  /* Larguras mínimas da sidebar */
-  --min-w-sidebar:           220px;
+  --text-2xs:               10px;
+  --text-2xs--line-height:  14px;
+  --text-xs:                11px;
+  --text-xs--line-height:   16px;
+  --text-sm:                12px;
+  --text-sm--line-height:   17px;
+  --text-base:              13px;
+  --text-base--line-height: 19px;
+  --min-w-sidebar:          220px;
   --min-w-sidebar-collapsed: 56px;
 }
 
+/* ============ Base ============ */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+h1, h2, h3, h4 { font-family: var(--font-disp); margin: 0; letter-spacing: -0.01em; }
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+::selection { background: var(--primary-soft); }
+
+/* Scrollbars discretos */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: oklch(0.8 0.01 250 / 0.6);
+  border-radius: 8px;
+  border: 2.5px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track { background: transparent; }

@@ -6,6 +6,7 @@ import {
   IconArrowUpRight,
   IconBan,
   IconDownload,
+  IconList,
   IconPlus,
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
@@ -13,49 +14,46 @@ import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { useState } from 'react';
 import { exportToCSV } from '@/lib/csv-export';
+import { EmptyState } from '@/components/admin/shared/empty-state';
+import { SbTable } from '@/components/admin/shared/sb-table';
+import { StateBadge } from '@/components/admin/shared/state-badge';
+import type { BadgeKind } from '@/components/admin/shared/state-badge';
 
 const TYPE_CONFIG = {
   consumption: {
-    label: 'Consumo',
+    label: 'Saída',
     icon: IconArrowUpRight,
-    color: 'text-status-critical',
-    bg: 'bg-red-50',
+    badge: 'danger'  as BadgeKind,
   },
   restock: {
     label: 'Entrada',
     icon: IconArrowDownLeft,
-    color: 'text-status-ok',
-    bg: 'bg-green-50',
+    badge: 'success' as BadgeKind,
   },
   transfer_out: {
     label: 'Saída (transf)',
     icon: IconArrowUpRight,
-    color: 'text-status-low',
-    bg: 'bg-amber-50',
+    badge: 'warn'    as BadgeKind,
   },
   transfer_in: {
     label: 'Entrada (transf)',
     icon: IconArrowDownLeft,
-    color: 'text-brand-500',
-    bg: 'bg-blue-50',
+    badge: 'info'    as BadgeKind,
   },
   adjustment: {
     label: 'Ajuste',
     icon: IconAdjustments,
-    color: 'text-text-secondary',
-    bg: 'bg-gray-50',
+    badge: 'info'    as BadgeKind,
   },
   initial: {
     label: 'Inicial',
     icon: IconArrowDownLeft,
-    color: 'text-text-muted',
-    bg: 'bg-gray-50',
+    badge: 'neutral' as BadgeKind,
   },
   return: {
     label: 'Devolução',
     icon: IconArrowDownLeft,
-    color: 'text-status-ok',
-    bg: 'bg-green-50',
+    badge: 'success' as BadgeKind,
   },
 } as const;
 
@@ -79,7 +77,7 @@ type Movement = {
 };
 
 type Location = { id: string; name: string };
-type Driver = { id: string; name: string };
+type Driver   = { id: string; name: string };
 
 type Props = {
   initialData: Movement[];
@@ -87,177 +85,159 @@ type Props = {
   drivers: Driver[];
 };
 
-const HEADERS = ['Tipo', 'Artigo', 'Quantidade', 'Location', 'Operador', 'Data/hora', ''] as const;
+type MovRow = Record<string, unknown> & Movement;
 
 export function MovementsTable({ initialData, locations }: Props) {
-  const [typeFilter, setTypeFilter] = useState<MovementType | ''>('');
+  const [typeFilter,     setTypeFilter]     = useState<MovementType | ''>('');
   const [locationFilter, setLocationFilter] = useState('');
 
   const filtered = initialData.filter((m) => {
-    const matchType = !typeFilter || m.movementType === typeFilter;
+    const matchType     = !typeFilter     || m.movementType === typeFilter;
     const matchLocation = !locationFilter || m.locationName === locationFilter;
     return matchType && matchLocation;
   });
 
   const handleExport = () => {
     exportToCSV(filtered, 'movimentacoes', [
-      {
-        key: (r) => format(new Date(r.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
-        label: 'Data/hora',
-      },
+      { key: (r) => format(new Date(r.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR }), label: 'Data/hora' },
       { key: (r) => TYPE_CONFIG[r.movementType].label, label: 'Tipo' },
-      { key: (r) => r.articleName, label: 'Artigo' },
-      { key: (r) => r.articleSku, label: 'SKU' },
-      { key: (r) => r.quantityDelta, label: 'Quantidade' },
-      { key: (r) => r.articleUnit, label: 'Unidade' },
-      { key: (r) => r.locationName, label: 'Location' },
-      { key: (r) => r.createdByName, label: 'Operador' },
+      { key: (r) => r.articleName,    label: 'Artigo'    },
+      { key: (r) => r.articleSku,     label: 'SKU'       },
+      { key: (r) => r.quantityDelta,  label: 'Quantidade'},
+      { key: (r) => r.articleUnit,    label: 'Unidade'   },
+      { key: (r) => r.locationName,   label: 'Location'  },
+      { key: (r) => r.createdByName,  label: 'Operador'  },
     ]);
   };
 
   return (
-    <div className="space-y-4">
-      {/* Cabeçalho: filtros + ações */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-3">
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as MovementType | '')}
-            className="rounded-btn border border-surface-border bg-white px-3 py-2 text-sm text-text-primary focus:border-brand-500 focus:outline-none"
-          >
-            <option value="">Todos os tipos</option>
-            {(
-              Object.entries(TYPE_CONFIG) as [MovementType, (typeof TYPE_CONFIG)[MovementType]][]
-            ).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="rounded-btn border border-surface-border bg-white px-3 py-2 text-sm text-text-primary focus:border-brand-500 focus:outline-none"
-          >
-            <option value="">Todas as locations</option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.name}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-
-          {(typeFilter || locationFilter) && (
-            <button
-              type="button"
-              onClick={() => {
-                setTypeFilter('');
-                setLocationFilter('');
-              }}
-              className="text-xs text-text-muted hover:text-text-secondary"
-            >
-              Limpar filtros
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleExport}
-            className="flex items-center gap-1.5 rounded-btn border border-surface-border bg-white px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface"
-          >
-            <IconDownload size={14} />
-            Exportar CSV
-          </button>
-          <Link
-            href="/movements/new"
-            className="flex items-center gap-1.5 rounded-btn bg-brand-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600"
-          >
-            <IconPlus size={14} />
-            Nova movimentação
-          </Link>
-        </div>
-      </div>
-
-      {/* Tabela */}
-      <div className="overflow-hidden rounded-card border border-surface-border bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-surface-border bg-surface">
-                {HEADERS.map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-text-muted"
-                  >
-                    {h}
-                  </th>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="card">
+        {/* Cabeçalho com filtros */}
+        <div
+          className="card-head"
+          style={{ paddingBottom: 14, flexWrap: 'wrap', gap: 12 }}
+        >
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="field" style={{ height: 36, width: 170 }}>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as MovementType | '')}
+              >
+                <option value="">Todos os tipos</option>
+                {(Object.entries(TYPE_CONFIG) as [MovementType, (typeof TYPE_CONFIG)[MovementType]][]).map(
+                  ([k, v]) => (
+                    <option key={k} value={k}>{v.label}</option>
+                  ),
+                )}
+              </select>
+            </div>
+            <div className="field" style={{ height: 36, width: 200 }}>
+              <select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+              >
+                <option value="">Todas as locations</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.name}>{l.name}</option>
                 ))}
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-surface-border">
-              {filtered.map((m) => {
-                const cfg = TYPE_CONFIG[m.movementType];
-                const Icon = cfg.icon;
-                const qty = parseFloat(m.quantityDelta);
-
-                return (
-                  <tr
-                    key={m.id}
-                    className={`transition-colors hover:bg-surface ${m.voidedAt ? 'opacity-50' : ''}`}
-                  >
-                    <td className="px-4 py-2.5">
-                      <div
-                        className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium ${cfg.bg} ${cfg.color}`}
-                      >
-                        <Icon size={12} />
-                        {cfg.label}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <p className="font-medium text-text-primary">{m.articleName}</p>
-                      <p className="font-mono text-xs text-text-muted">{m.articleSku}</p>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={`font-medium ${qty < 0 ? 'text-status-critical' : 'text-status-ok'}`}
-                      >
-                        {qty > 0 ? '+' : ''}
-                        {qty.toFixed(3)} {m.articleUnit}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-text-secondary">{m.locationName}</td>
-                    <td className="px-4 py-2.5 text-text-secondary">{m.createdByName}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-text-secondary">
-                      {format(new Date(m.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {m.voidedAt && (
-                        <span className="inline-flex items-center gap-1 text-xs text-text-muted">
-                          <IconBan size={12} /> Estornado
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-text-muted">
-                    Nenhuma movimentação encontrada.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </select>
+            </div>
+            {(typeFilter || locationFilter) && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => { setTypeFilter(''); setLocationFilter(''); }}
+              >
+                Limpar filtros
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>
+              {filtered.length} movimentações
+            </span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handleExport}>
+              <IconDownload size={14} /> Exportar CSV
+            </button>
+            <Link href="/movements/new" className="btn btn-primary btn-sm" style={{ gap: 6 }}>
+              <IconPlus size={14} /> Nova movimentação
+            </Link>
+          </div>
         </div>
-      </div>
 
-      <p className="text-xs text-text-muted">{filtered.length} movimentações exibidas</p>
+        <SbTable<MovRow>
+          columns={[
+            { key: 'tipo',   label: 'Tipo',       width: '0.9fr'             },
+            { key: 'artigo', label: 'Artigo',     width: '1.2fr', wide: true  },
+            { key: 'qtd',    label: 'Quantidade', width: '0.9fr'             },
+            { key: 'loc',    label: 'Location',   width: '1.1fr'             },
+            { key: 'op',     label: 'Operador',   width: '0.8fr'             },
+            { key: 'dt',     label: 'Data/Hora',  width: '1fr'               },
+            { key: 'void',   label: '',           width: '80px', align: 'right' },
+          ]}
+          rows={filtered as MovRow[]}
+          rowKey={(r) => r.id}
+          empty={
+            <EmptyState
+              icon={IconList}
+              title="Nenhuma movimentação encontrada"
+              sub="Tente ajustar os filtros ou registre uma nova movimentação."
+              action={
+                <Link href="/movements/new" className="btn btn-primary btn-sm">
+                  <IconPlus size={14} /> Nova movimentação
+                </Link>
+              }
+            />
+          }
+          renderCell={(r, k) => {
+            if (k === 'tipo') {
+              const cfg = TYPE_CONFIG[r.movementType];
+              const Icon = cfg.icon;
+              return (
+                <StateBadge kind={cfg.badge}>
+                  <Icon size={12} /> {cfg.label}
+                </StateBadge>
+              );
+            }
+            if (k === 'artigo')
+              return (
+                <span style={{ opacity: r.voidedAt ? 0.5 : 1 }}>
+                  <b>{r.articleName}</b>{' '}
+                  <span className="mono" style={{ color: 'var(--faint)' }}>{r.articleSku}</span>
+                </span>
+              );
+            if (k === 'qtd') {
+              const qty = parseFloat(r.quantityDelta);
+              return (
+                <span
+                  style={{
+                    fontWeight: 800,
+                    color: qty < 0 ? 'var(--danger-ink)' : 'var(--success-ink)',
+                  }}
+                >
+                  {qty > 0 ? '+' : ''}{qty.toFixed(3)} {r.articleUnit}
+                </span>
+              );
+            }
+            if (k === 'loc')  return <span style={{ color: 'var(--ink-2)' }}>{r.locationName}</span>;
+            if (k === 'op')   return <span style={{ color: 'var(--ink-2)' }}>{r.createdByName}</span>;
+            if (k === 'dt')
+              return (
+                <span className="mono" style={{ color: 'var(--muted)' }}>
+                  {format(new Date(r.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                </span>
+              );
+            if (k === 'void' && r.voidedAt)
+              return (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--muted)' }}>
+                  <IconBan size={12} /> Estornado
+                </span>
+              );
+            return null;
+          }}
+        />
+      </div>
     </div>
   );
 }
