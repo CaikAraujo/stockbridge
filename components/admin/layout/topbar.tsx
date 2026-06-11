@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { auth } from '@/lib/auth/config';
 import {
   DropdownMenu,
@@ -85,6 +86,17 @@ export async function AdminTopbar({ title, subtitle }: AdminTopbarProps) {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem asChild>
+            <Link href="/admin?tab=seguranca">
+              <svg viewBox="0 0 24 24" width={14} height={14} fill="none"
+                stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"
+                style={{ marginRight: 8 }} aria-hidden="true">
+                <path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6z"/>
+                <path d="M8.8 12l2.2 2.2 4.2-4.2"/>
+              </svg>
+              Segurança
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild className="text-red-600 focus:text-red-600">
             <LogoutButton />
