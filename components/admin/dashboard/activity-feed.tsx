@@ -99,7 +99,7 @@ export function ActivityFeed({ activity }: Props) {
           <div className="card-sub">Últimas movimentações registradas</div>
         </div>
         <Link
-          href="/movements"
+          href="/estoque?tab=movimentacoes"
           style={{
             background: 'transparent',
             color: 'var(--primary)',

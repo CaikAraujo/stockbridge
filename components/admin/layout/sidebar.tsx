@@ -1,22 +1,15 @@
 'use client';
 
 import {
-  IconArrowLeftRight,
   IconBell,
-  IconBox,
   IconBriefcase,
   IconBuildingWarehouse,
-  IconClipboardList,
-  IconDroplet,
   IconFileText,
   IconLayoutDashboard,
   IconLogout,
-  IconSettings,
   IconShield,
-  IconShieldLock,
   IconTransfer,
   IconTruck,
-  IconUsers,
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -34,18 +27,14 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Operação',
     items: [
       { href: '/dashboard',   label: 'Dashboard',      icon: IconLayoutDashboard },
-      { href: '/deposito',    label: 'Depósito',        icon: IconBuildingWarehouse },
       { href: '/trucks',      label: 'Caminhões',       icon: IconTruck },
-      { href: '/movements',   label: 'Movimentações',   icon: IconArrowLeftRight },
       { href: '/transfers',   label: 'Transferências',  icon: IconTransfer },
     ],
   },
   {
     label: 'Estoque',
     items: [
-      { href: '/articles',    label: 'Artigos',         icon: IconBox },
-      { href: '/inventory',   label: 'Inventário',      icon: IconClipboardList },
-      { href: '/gas-bottles', label: 'Garrafas de gás', icon: IconDroplet },
+      { href: '/estoque',     label: 'Estoque',         icon: IconBuildingWarehouse },
     ],
   },
   {
@@ -58,11 +47,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Sistema',
     items: [
-      { href: '/users',          label: 'Usuários',      icon: IconUsers },
-      { href: '/audit',          label: 'Auditoria',     icon: IconShieldLock },
-      { href: '/settings/totp',  label: 'Segurança',     icon: IconShield },
-      { href: '/settings',       label: 'Configurações', icon: IconSettings },
-      { href: '/notifications',  label: 'Notificações',  icon: IconBell },
+      { href: '/admin',              label: 'Administração', icon: IconShield },
+      { href: '/notifications',      label: 'Notificações',  icon: IconBell  },
     ],
   },
 ];

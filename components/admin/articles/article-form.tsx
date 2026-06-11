@@ -103,7 +103,7 @@ export function ArticleForm({ mode, articleId, initial }: ArticleFormProps) {
         await update.mutateAsync({ id: articleId, ...payload });
         toast.success('Artigo atualizado com sucesso');
       }
-      router.push('/articles');
+      router.push('/estoque?tab=artigos');
       router.refresh();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar artigo';

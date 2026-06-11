@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { auth } from '@/lib/auth/config';
 import {
   DropdownMenu,
@@ -9,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { LogoutButton } from './logout-button';
 import { HamburgerButton, RailToggleButton } from './hamburger-btn';
+import { NotifBell } from './notif-bell';
 
 interface AdminTopbarProps {
   title?: string;
@@ -67,14 +67,8 @@ export async function AdminTopbar({ title, subtitle }: AdminTopbarProps) {
 
       <div style={{ flex: 1 }} />
 
-      {/* Notificações — apenas link para a página existente */}
-      <Link href="/notifications" className="tb-btn" aria-label="Notificações">
-        <svg viewBox="0 0 24 24" width={19} height={19} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9z" />
-          <path d="M10 19.5a2.2 2.2 0 0 0 4 0" />
-        </svg>
-        <span className="tb-dot" />
-      </Link>
+      {/* Notificações — popover com live data */}
+      <NotifBell />
 
       {/* Usuário */}
       <DropdownMenu>

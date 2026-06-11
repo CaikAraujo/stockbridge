@@ -1,6 +1,41 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: '/users',
+        destination: '/admin?tab=usuarios',
+        permanent: true,
+      },
+      {
+        source: '/settings/totp',
+        destination: '/admin?tab=seguranca',
+        permanent: true,
+      },
+      {
+        source: '/deposito',
+        destination: '/estoque?tab=deposito',
+        permanent: true,
+      },
+      {
+        source: '/articles',
+        destination: '/estoque?tab=artigos',
+        permanent: true,
+      },
+      {
+        source: '/gas-bottles',
+        destination: '/estoque?tab=gas',
+        permanent: true,
+      },
+      {
+        source: '/movements',
+        destination: '/estoque?tab=movimentacoes',
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

@@ -88,7 +88,7 @@ export function ManualMovementForm({
         });
         toast.success('Ajuste registrado com sucesso');
       }
-      router.push('/movements');
+      router.push('/estoque?tab=movimentacoes');
       router.refresh();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Erro ao registrar');

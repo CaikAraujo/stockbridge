@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       });
 
       if (!user?.totpSecret) {
-        redirect('/settings/totp');
+        redirect('/login?error=totp_required');
       }
 
       const cookieStore = await cookies();
