@@ -156,6 +156,26 @@
   --radius-md: var(--r-md);
   --radius-lg: var(--r-lg);
   --radius-xl: var(--r-xl);
+
+  /* Aliases de compatibilidade — tokens legados */
+  --color-brand-50:  var(--primary-softer);
+  --color-brand-100: var(--primary-soft);
+  --color-brand-500: var(--primary);
+  --color-brand-600: var(--primary-strong);
+
+  --color-text-primary:   var(--ink);
+  --color-text-secondary: var(--ink-2);
+  --color-text-muted:     var(--muted);
+
+  --color-surface-border: var(--border);
+  --color-surface:        var(--surface);
+
+  --color-status-critical: var(--danger);
+  --color-status-warn:     var(--warn);
+  --color-status-ok:       var(--success);
+
+  --radius-card: var(--r-lg);
+  --radius-btn:  var(--r-sm);
 }
 
 /* Escala tipográfica compacta (admin desktop) e layout */
