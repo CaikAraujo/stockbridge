@@ -1,7 +1,7 @@
 import { and, count, eq, gt, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { articles, locations, stockLevels, stockMovements, transfers, users } from '@/db/schema';
 import { idSchema } from '@/lib/schemas/common';
-import { protectedProcedure } from '@/server/procedures';
+import { managerProcedure, protectedProcedure } from '@/server/procedures';
 import { router } from '@/server/trpc';
 
 export const dashboardRouter = router({
@@ -101,6 +101,66 @@ export const dashboardRouter = router({
         lowCount: low?.lowCount ?? 0,
       };
     });
+  }),
+
+  getMovementHistory: managerProcedure.query(async ({ ctx }) => {
+    // Build an array of the last 14 days (oldest → newest)
+    const days = Array.from({ length: 14 }, (_, i) => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - (13 - i));
+      return d;
+    });
+
+    const rangeStart = days[0]!;
+    const rangeEnd   = new Date();
+
+    const rows = await ctx.db
+      .select({
+        day:  sql<string>`date_trunc('day', ${stockMovements.createdAt})::date::text`,
+        type: stockMovements.movementType,
+        cnt:  count(),
+      })
+      .from(stockMovements)
+      .where(
+        and(
+          isNull(stockMovements.voidedAt),
+          gte(stockMovements.createdAt, rangeStart),
+          lte(stockMovements.createdAt, rangeEnd),
+        ),
+      )
+      .groupBy(
+        sql`date_trunc('day', ${stockMovements.createdAt})::date`,
+        stockMovements.movementType,
+      );
+
+    const ENTRY_TYPES = new Set(['restock', 'initial', 'return']);
+    const EXIT_TYPES  = new Set(['consumption', 'transfer_out']);
+
+    // Aggregate per day
+    const byDay = new Map<string, { entries: number; exits: number }>();
+    for (const row of rows) {
+      const key = row.day; // 'YYYY-MM-DD'
+      const cur = byDay.get(key) ?? { entries: 0, exits: 0 };
+      if (ENTRY_TYPES.has(row.type)) cur.entries += row.cnt;
+      if (EXIT_TYPES.has(row.type))  cur.exits   += row.cnt;
+      byDay.set(key, cur);
+    }
+
+    const labels:  string[] = [];
+    const entries: number[] = [];
+    const exits:   number[] = [];
+
+    for (const d of days) {
+      // Build key matching what Postgres returns: 'YYYY-MM-DD'
+      const key = d.toISOString().slice(0, 10);
+      const agg = byDay.get(key) ?? { entries: 0, exits: 0 };
+      labels.push(`${d.getDate()}/${d.getMonth() + 1}`);
+      entries.push(agg.entries);
+      exits.push(agg.exits);
+    }
+
+    return { labels, entries, exits };
   }),
 
   getTruckInventory: protectedProcedure.input(idSchema).query(async ({ ctx, input }) => {

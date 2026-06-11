@@ -6,9 +6,7 @@ import {
   IconTruck,
 } from '@tabler/icons-react';
 import type { ComponentType } from 'react';
-
-// TODO: sparkline history data not available — skip Sparkline in KPI cards
-// When a trending history endpoint is added, re-enable Sparkline here.
+import { Sparkline } from './sparkline';
 
 interface Stats {
   movementsToday: number;
@@ -20,6 +18,8 @@ interface Props {
   stats: Stats;
   itensEmCaminhoes: number;
   activeTrucksCount: number;
+  sparkEntries: number[];
+  sparkExits: number[];
 }
 
 type Tone = 'up' | 'down' | 'flat';
@@ -31,9 +31,11 @@ interface KpiConfig {
   tone: Tone;
   icon: ComponentType<{ size?: number; className?: string }>;
   hue: string;
+  sparkData: number[];
+  sparkColor: string;
 }
 
-function KpiCard({ label, value, delta, tone, icon: Icon, hue }: KpiConfig) {
+function KpiCard({ label, value, delta, tone, icon: Icon, hue, sparkData, sparkColor }: KpiConfig) {
   const deltaColor =
     tone === 'down'
       ? 'var(--danger-ink)'
@@ -48,6 +50,7 @@ function KpiCard({ label, value, delta, tone, icon: Icon, hue }: KpiConfig) {
       className="card card-hover"
       style={{ padding: 'var(--card-pad)', display: 'flex', flexDirection: 'column', gap: 10 }}
     >
+      {/* Header row: label + icon */}
       <div
         style={{
           display: 'flex',
@@ -72,35 +75,49 @@ function KpiCard({ label, value, delta, tone, icon: Icon, hue }: KpiConfig) {
           <Icon size={17} />
         </span>
       </div>
-      <div>
-        <div
-          style={{
-            fontFamily: 'var(--font-disp)',
-            fontSize: 32,
-            fontWeight: 700,
-            lineHeight: 1,
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {value}
+
+      {/* Value + sparkline */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
+        <div>
+          <div
+            style={{
+              fontFamily: 'var(--font-disp)',
+              fontSize: 32,
+              fontWeight: 700,
+              lineHeight: 1,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {value}
+          </div>
+          <div
+            style={{
+              fontSize: 11.5,
+              fontWeight: 700,
+              marginTop: 6,
+              whiteSpace: 'nowrap',
+              color: deltaColor,
+            }}
+          >
+            {delta}
+          </div>
         </div>
-        <div
-          style={{
-            fontSize: 11.5,
-            fontWeight: 700,
-            marginTop: 6,
-            whiteSpace: 'nowrap',
-            color: deltaColor,
-          }}
-        >
-          {delta}
-        </div>
+        <Sparkline data={sparkData} color={sparkColor} width={80} height={36} />
       </div>
     </div>
   );
 }
 
-export function StatsCards({ stats, itensEmCaminhoes, activeTrucksCount }: Props) {
+export function StatsCards({
+  stats,
+  itensEmCaminhoes,
+  activeTrucksCount,
+  sparkEntries,
+  sparkExits,
+}: Props) {
+  // Use exits as proxy for alerts sparkline (both reflect demand pressure)
+  const sparkAlerts = sparkExits;
+
   const cards: KpiConfig[] = [
     {
       label: 'Saídas hoje',
@@ -110,6 +127,8 @@ export function StatsCards({ stats, itensEmCaminhoes, activeTrucksCount }: Props
       tone: stats.movementsToday > 0 ? 'up' : 'flat',
       icon: IconArrowUpRight,
       hue: 'var(--primary)',
+      sparkData: sparkExits,
+      sparkColor: 'var(--primary)',
     },
     {
       label: 'Transferências em trânsito',
@@ -121,6 +140,8 @@ export function StatsCards({ stats, itensEmCaminhoes, activeTrucksCount }: Props
       tone: 'flat',
       icon: IconTransfer,
       hue: 'var(--violet)',
+      sparkData: sparkEntries,
+      sparkColor: 'oklch(0.55 0.19 295)',
     },
     {
       label: 'Alertas de estoque',
@@ -129,6 +150,8 @@ export function StatsCards({ stats, itensEmCaminhoes, activeTrucksCount }: Props
       tone: stats.lowStockAlerts > 0 ? 'down' : 'flat',
       icon: IconAlertTriangle,
       hue: stats.lowStockAlerts > 0 ? 'var(--danger)' : 'var(--success)',
+      sparkData: sparkAlerts,
+      sparkColor: 'var(--danger)',
     },
     {
       label: 'Itens em caminhões',
@@ -137,6 +160,8 @@ export function StatsCards({ stats, itensEmCaminhoes, activeTrucksCount }: Props
       tone: 'flat',
       icon: IconTruck,
       hue: 'var(--cyan-ink)',
+      sparkData: sparkEntries,
+      sparkColor: 'var(--cyan-ink)',
     },
   ];
 
