@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, gte, lte } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, lte } from 'drizzle-orm';
 import { z } from 'zod';
-import { articles, stockLevels, stockMovements, transfers, users } from '@/db/schema';
+import { articles, locations, stockLevels, stockMovements, transfers, users } from '@/db/schema';
 import { managerProcedure, protectedProcedure } from '@/server/procedures';
 import { router } from '@/server/trpc';
 
@@ -143,4 +143,68 @@ export const driversRouter = router({
       });
       return article ?? null;
     }),
+
+  // Disponibilidade do depósito — artigos com saldo > 0 no warehouse + quais caminhões têm o mesmo artigo
+  warehouseAvailability: protectedProcedure.query(async ({ ctx }) => {
+    // 1) Busca artigos com saldo no depósito (location type = 'warehouse')
+    const warehouseRows = await ctx.db
+      .select({
+        articleId: articles.id,
+        name: articles.name,
+        sku: articles.sku,
+        unit: articles.unit,
+        warehouseQty: stockLevels.quantity,
+      })
+      .from(stockLevels)
+      .innerJoin(articles, eq(stockLevels.articleId, articles.id))
+      .innerJoin(locations, eq(stockLevels.locationId, locations.id))
+      .where(
+        and(
+          eq(locations.type, 'warehouse'),
+          eq(locations.active, true),
+          eq(articles.active, true),
+          gt(stockLevels.quantity, '0'),
+        ),
+      )
+      .orderBy(articles.name);
+
+    if (warehouseRows.length === 0) return [];
+
+    const articleIds = warehouseRows.map((r) => r.articleId);
+
+    // 2) Busca caminhões que também têm esses artigos — 1 query, sem N+1
+    const truckRows = await ctx.db
+      .select({
+        articleId: stockLevels.articleId,
+        truckName: locations.name,
+        driverName: users.name,
+        quantity: stockLevels.quantity,
+      })
+      .from(stockLevels)
+      .innerJoin(locations, eq(stockLevels.locationId, locations.id))
+      .leftJoin(users, eq(locations.assignedUserId, users.id))
+      .where(
+        and(
+          eq(locations.type, 'truck'),
+          eq(locations.active, true),
+          inArray(stockLevels.articleId, articleIds),
+          gt(stockLevels.quantity, '0'),
+        ),
+      );
+
+    return warehouseRows.map((row) => ({
+      articleId: row.articleId,
+      name: row.name,
+      sku: row.sku,
+      unit: row.unit,
+      warehouseQty: parseFloat(row.warehouseQty),
+      driversWithItem: truckRows
+        .filter((t) => t.articleId === row.articleId)
+        .map((t) => ({
+          driverName: t.driverName ?? 'Sem motorista',
+          truckName: t.truckName,
+          quantity: parseFloat(t.quantity),
+        })),
+    }));
+  }),
 });
