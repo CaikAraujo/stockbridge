@@ -1,21 +1,25 @@
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { z } from 'zod';
 import { db } from '@/db/client';
-import { users } from '@/db/schema';
+import { sessions, users } from '@/db/schema';
 import { idempotencySchema } from '@/lib/schemas/common';
 import {
+  checkDriverEmailSchema,
   createDriverSchema,
   deleteDriverSchema,
   getDriverPinSchema,
+  setDriverPasswordSchema,
   setPinSchema,
   userCreateSchema,
   userUpdateSchema,
+  verifyDriverPasswordSchema,
   verifyPinSchema,
 } from '@/lib/schemas/users';
-import { adminProcedure, driverProcedure } from '@/server/procedures';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { adminProcedure, driverProcedure, publicProcedure } from '@/server/procedures';
 import { UserService } from '@/server/services/user.service';
 import { router } from '@/server/trpc';
 
@@ -36,10 +40,15 @@ export const usersRouter = router({
         active: true,
         lastLoginAt: true,
         pinHash: true,
+        passwordHash: true,
       },
       orderBy: (u, { asc }) => asc(u.name),
     });
-    return rows.map(({ pinHash, ...u }) => ({ ...u, hasPinSet: pinHash !== null }));
+    return rows.map(({ pinHash, passwordHash, ...u }) => ({
+      ...u,
+      hasPinSet: pinHash !== null,
+      hasPasswordSet: passwordHash !== null,
+    }));
   }),
 
   create: adminProcedure
@@ -171,5 +180,78 @@ export const usersRouter = router({
         });
       }
       return userService.deleteDriver({ userId: input.userId });
+    }),
+
+  // Admin define senha web para motorista
+  setDriverPassword: adminProcedure
+    .input(setDriverPasswordSchema.merge(idempotencySchema))
+    .mutation(async ({ input }) => {
+      const { idempotencyKey: _k, ...data } = input;
+      return userService.setDriverPassword(data);
+    }),
+
+  // Verifica se o e-mail pertence a um motorista ativo (sem lançar erro)
+  checkDriverEmail: publicProcedure
+    .input(checkDriverEmailSchema)
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.query.users.findFirst({
+        where: (u, { and: andFn, eq: eqFn }) =>
+          andFn(eqFn(u.email, input.email), eqFn(u.role, 'driver'), eqFn(u.active, true)),
+        columns: { id: true, name: true, passwordHash: true },
+      });
+
+      if (!user) return { isDriver: false, hasPassword: false, name: '' };
+      return {
+        isDriver: true,
+        hasPassword: user.passwordHash !== null,
+        name: user.name,
+      };
+    }),
+
+  // Login por senha para motoristas — cria sessão manualmente
+  verifyDriverPassword: publicProcedure
+    .input(verifyDriverPasswordSchema)
+    .mutation(async ({ ctx, input }) => {
+      const rl = checkRateLimit(`driver-login:${input.email}`, 5, 15 * 60 * 1000);
+      if (!rl.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: `Muitas tentativas. Aguarde até ${rl.resetAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`,
+        });
+      }
+
+      const user = await ctx.db.query.users.findFirst({
+        where: (u, { and: andFn, eq: eqFn }) =>
+          andFn(eqFn(u.email, input.email), eqFn(u.role, 'driver'), eqFn(u.active, true)),
+        columns: { id: true, name: true, passwordHash: true },
+      });
+
+      if (!user) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Motorista não encontrado.' });
+      }
+
+      if (!user.passwordHash) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Senha não configurada. Contacte o administrador.',
+        });
+      }
+
+      const valid = await argon2.verify(user.passwordHash, input.password);
+      if (!valid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Senha incorreta.' });
+      }
+
+      const sessionToken = crypto.randomUUID();
+      const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      await ctx.db.insert(sessions).values({
+        sessionToken,
+        userId: user.id,
+        expires,
+        totpVerified: false,
+      });
+
+      return { sessionToken, name: user.name };
     }),
 });

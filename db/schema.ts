@@ -1,5 +1,7 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -78,6 +80,7 @@ export const users = pgTable(
     name: text('name').notNull(),
     role: userRoleEnum('role').notNull().default('driver'),
     pinHash: text('pin_hash'), // PIN para driver
+    passwordHash: text('password_hash'), // Senha para login web do driver
     totpSecret: text('totp_secret'), // 2FA para admin/manager
     // FK declarada fora do pgTable porque há ciclo com locations
     defaultLocationId: uuid('default_location_id'),
@@ -302,6 +305,7 @@ export const stockLevels = pgTable(
     pk: primaryKey({ columns: [t.articleId, t.locationId] }),
     // CRÍTICO: query "quanto tem o caminhão X" filtra por locationId — não usa a PK (que começa por articleId)
     locationIdx: index('stock_levels_location_idx').on(t.locationId),
+    nonNegativeQty: check('stock_levels_non_negative', sql`${t.quantity} >= 0`),
   }),
 );
 

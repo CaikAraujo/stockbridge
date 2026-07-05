@@ -21,6 +21,11 @@ export interface SetDriverPinParams {
   pin: string;
 }
 
+export interface SetDriverPasswordParams {
+  userId: string;
+  password: string;
+}
+
 export class UserService {
   constructor(private db: DB) {}
 
@@ -114,6 +119,32 @@ export class UserService {
     await this.db
       .update(users)
       .set({ pinHash: hash, updatedAt: new Date() })
+      .where(eq(users.id, params.userId));
+
+    return { success: true };
+  }
+
+  async setDriverPassword(params: SetDriverPasswordParams): Promise<{ success: true }> {
+    const user = await this.db.query.users.findFirst({
+      where: (u, { eq: eqFn }) => eqFn(u.id, params.userId),
+      columns: { id: true, role: true },
+    });
+
+    if (!user) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Usuário não encontrado.' });
+    }
+
+    if (user.role !== 'driver') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Só é possível definir senha para motoristas.',
+      });
+    }
+
+    const hash = await argon2.hash(params.password);
+    await this.db
+      .update(users)
+      .set({ passwordHash: hash, updatedAt: new Date() })
       .where(eq(users.id, params.userId));
 
     return { success: true };

@@ -14,6 +14,7 @@ type User = {
   role: 'admin' | 'manager' | 'driver';
   active: boolean;
   hasPinSet: boolean;
+  hasPasswordSet: boolean;
   defaultLocationId: string | null;
   lastLoginAt: Date | null;
 };

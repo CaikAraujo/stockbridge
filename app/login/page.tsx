@@ -1,8 +1,5 @@
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { AuthError } from 'next-auth';
-import { signIn } from '@/lib/auth/config';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { LoginForm } from './_components/login-form';
+import { sendMagicLinkAction } from './actions';
 
 export default async function LoginPage({
   searchParams,
@@ -89,92 +86,11 @@ export default async function LoginPage({
 
       {/* ── Coluna direita: formulário ── */}
       <div className="login-form-side">
-        <div className="login-card screen-enter">
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Acesso ao sistema</h2>
-          <p style={{ color: 'var(--muted)', fontSize: 13.5, margin: '6px 0 24px' }}>
-            Informe seu e-mail para receber o link de acesso.
-          </p>
-
-          {/* Erro de autenticação — lógica intacta */}
-          {error && (
-            <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 10, background: 'var(--danger-bg)', color: 'var(--danger-ink)', fontSize: 13, fontWeight: 600 }}>
-              {error === 'RateLimit'
-                ? 'Muitas tentativas. Aguarde 10 minutos.'
-                : error === 'Verification'
-                  ? 'Link expirado ou inválido. Solicite um novo.'
-                  : 'Erro ao fazer login. Tente novamente.'}
-            </div>
-          )}
-
-          {/* Formulário — server action intacta byte-a-byte */}
-          <form
-            action={async (formData: FormData) => {
-              'use server';
-              const email = formData.get('email') as string;
-              const headersList = await headers();
-              const ip =
-                headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-                headersList.get('x-real-ip') ??
-                'unknown';
-
-              const rlKey = `login:${ip}:${email}`;
-              const rl = checkRateLimit(rlKey, 5, 10 * 60 * 1000);
-              if (!rl.allowed) {
-                redirect('/login?error=RateLimit');
-              }
-
-              const safeCallbackUrl =
-                callbackUrl?.startsWith('/') && !callbackUrl.startsWith('//')
-                  ? callbackUrl
-                  : '/dashboard';
-
-              try {
-                await signIn('resend', { email, redirectTo: safeCallbackUrl });
-              } catch (err) {
-                if (err instanceof AuthError) {
-                  redirect(`/login?error=${err.type}`);
-                }
-                throw err;
-              }
-            }}
-          >
-            <label htmlFor="login-email" style={{ fontSize: 12.5, fontWeight: 800, display: 'block', marginBottom: 7 }}>
-              E-mail
-            </label>
-
-            <div className="field" style={{ height: 46, borderRadius: 12, marginBottom: 14 }}>
-              <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3" y="5" width="18" height="14" rx="2.5" />
-                <path d="M3.5 7l8.5 6 8.5-6" />
-              </svg>
-              <input
-                id="login-email"
-                type="email"
-                name="email"
-                required
-                placeholder="seu@email.com"
-                style={{ border: 0, outline: 0, background: 'transparent', flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--ink)', height: '100%' }}
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%', height: 46, borderRadius: 12, fontSize: 14.5 }}
-            >
-              Enviar link de acesso
-            </button>
-          </form>
-
-          {/* Nota informativa */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 18, padding: '12px 14px', borderRadius: 12, background: 'var(--info-bg)', color: 'var(--info-ink)', fontSize: 12.5, fontWeight: 600 }}>
-            <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 1, flexShrink: 0 }} aria-hidden="true">
-              <rect x="5" y="11" width="14" height="9.5" rx="2" />
-              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-            </svg>
-            Você receberá um link seguro no e-mail. Válido por 10 minutos.
-          </div>
-        </div>
+        <LoginForm
+          sendMagicLink={sendMagicLinkAction}
+          initialError={error}
+          callbackUrl={callbackUrl}
+        />
       </div>
     </div>
   );

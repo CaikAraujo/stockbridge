@@ -41,3 +41,17 @@ export const verifyPinSchema = z.object({
 export const getDriverPinSchema = z.object({
   userId: z.string().uuid(),
 });
+
+export const setDriverPasswordSchema = z.object({
+  userId: z.string().uuid(),
+  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').max(72),
+});
+
+export const verifyDriverPasswordSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1).max(72),
+});
+
+export const checkDriverEmailSchema = z.object({
+  email: z.string().email(),
+});

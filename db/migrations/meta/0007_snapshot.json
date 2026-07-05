@@ -1,6 +1,6 @@
 {
-  "id": "b7f2a341-5c9e-4d8b-a012-3e6f94c17d85",
-  "prevId": "a3c5e71b-8f2d-4e6a-9c1d-0f3b72e84ca9",
+  "id": "6ed041a9-d149-45b1-a551-7a63e8f4f785",
+  "prevId": "b7f2a341-5c9e-4d8b-a012-3e6f94c17d85",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -97,8 +97,12 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -106,7 +110,10 @@
       "compositePrimaryKeys": {
         "accounts_provider_provider_account_id_pk": {
           "name": "accounts_provider_provider_account_id_pk",
-          "columns": ["provider", "provider_account_id"]
+          "columns": [
+            "provider",
+            "provider_account_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -155,7 +162,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "\u0027un\u0027"
+          "default": "'un'"
         },
         "category_id": {
           "name": "category_id",
@@ -192,14 +199,14 @@
           "type": "numeric(14, 3)",
           "primaryKey": false,
           "notNull": true,
-          "default": "\u00270\u0027"
+          "default": "'0'"
         },
         "reorder_point": {
           "name": "reorder_point",
           "type": "numeric(14, 3)",
           "primaryKey": false,
           "notNull": true,
-          "default": "\u00270\u0027"
+          "default": "'0'"
         },
         "refrigerant_type": {
           "name": "refrigerant_type",
@@ -308,8 +315,12 @@
           "name": "articles_category_id_categories_id_fk",
           "tableFrom": "articles",
           "tableTo": "categories",
-          "columnsFrom": ["category_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -317,8 +328,12 @@
           "name": "articles_supplier_id_suppliers_id_fk",
           "tableFrom": "articles",
           "tableTo": "suppliers",
-          "columnsFrom": ["supplier_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "supplier_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -328,12 +343,16 @@
         "articles_sku_unique": {
           "name": "articles_sku_unique",
           "nullsNotDistinct": false,
-          "columns": ["sku"]
+          "columns": [
+            "sku"
+          ]
         },
         "articles_barcode_unique": {
           "name": "articles_barcode_unique",
           "nullsNotDistinct": false,
-          "columns": ["barcode"]
+          "columns": [
+            "barcode"
+          ]
         }
       },
       "policies": {},
@@ -471,8 +490,12 @@
           "name": "audit_log_user_id_users_id_fk",
           "tableFrom": "audit_log",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -515,7 +538,177 @@
         "categories_name_unique": {
           "name": "categories_name_unique",
           "nullsNotDistinct": false,
-          "columns": ["name"]
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.gas_bottles": {
+      "name": "gas_bottles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gas_type_code": {
+          "name": "gas_type_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "initial_weight_kg": {
+          "name": "initial_weight_kg",
+          "type": "numeric(8, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "current_weight_kg": {
+          "name": "current_weight_kg",
+          "type": "numeric(8, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'available'"
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "gas_bottles_status_idx": {
+          "name": "gas_bottles_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "gas_bottles_location_idx": {
+          "name": "gas_bottles_location_idx",
+          "columns": [
+            {
+              "expression": "location_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "gas_bottles_location_id_locations_id_fk": {
+          "name": "gas_bottles_location_id_locations_id_fk",
+          "tableFrom": "gas_bottles",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "location_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "gas_bottles_article_id_articles_id_fk": {
+          "name": "gas_bottles_article_id_articles_id_fk",
+          "tableFrom": "gas_bottles",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "gas_bottles_created_by_users_id_fk": {
+          "name": "gas_bottles_created_by_users_id_fk",
+          "tableFrom": "gas_bottles",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "gas_bottles_reference_unique": {
+          "name": "gas_bottles_reference_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "reference"
+          ]
         }
       },
       "policies": {},
@@ -592,8 +785,12 @@
           "name": "idempotency_keys_user_id_users_id_fk",
           "tableFrom": "idempotency_keys",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -601,7 +798,11 @@
       "compositePrimaryKeys": {
         "idempotency_keys_user_id_endpoint_key_pk": {
           "name": "idempotency_keys_user_id_endpoint_key_pk",
-          "columns": ["user_id", "endpoint", "key"]
+          "columns": [
+            "user_id",
+            "endpoint",
+            "key"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -656,7 +857,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "\u0027open\u0027"
+          "default": "'open'"
         },
         "created_by": {
           "name": "created_by",
@@ -743,8 +944,12 @@
           "name": "jobs_created_by_users_id_fk",
           "tableFrom": "jobs",
           "tableTo": "users",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -754,7 +959,9 @@
         "jobs_code_unique": {
           "name": "jobs_code_unique",
           "nullsNotDistinct": false,
-          "columns": ["code"]
+          "columns": [
+            "code"
+          ]
         }
       },
       "policies": {},
@@ -868,8 +1075,12 @@
           "name": "locations_assigned_user_id_users_id_fk",
           "tableFrom": "locations",
           "tableTo": "users",
-          "columnsFrom": ["assigned_user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "assigned_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -879,7 +1090,401 @@
         "locations_code_unique": {
           "name": "locations_code_unique",
           "nullsNotDistinct": false,
-          "columns": ["code"]
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.notifications": {
+      "name": "notifications",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unread'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_by": {
+          "name": "resolved_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "notifications_status_idx": {
+          "name": "notifications_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "notifications_resolved_by_users_id_fk": {
+          "name": "notifications_resolved_by_users_id_fk",
+          "tableFrom": "notifications",
+          "tableTo": "users",
+          "columnsFrom": [
+            "resolved_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rapport_import_items": {
+      "name": "rapport_import_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "rapport_id": {
+          "name": "rapport_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "interfast_article_id": {
+          "name": "interfast_article_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "supplier_code": {
+          "name": "supplier_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "numeric(14, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price_cents": {
+          "name": "price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "movement_id": {
+          "name": "movement_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unmatched'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rapport_import_items_rapport_idx": {
+          "name": "rapport_import_items_rapport_idx",
+          "columns": [
+            {
+              "expression": "rapport_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rapport_import_items_rapport_id_rapport_imports_id_fk": {
+          "name": "rapport_import_items_rapport_id_rapport_imports_id_fk",
+          "tableFrom": "rapport_import_items",
+          "tableTo": "rapport_imports",
+          "columnsFrom": [
+            "rapport_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "rapport_import_items_article_id_articles_id_fk": {
+          "name": "rapport_import_items_article_id_articles_id_fk",
+          "tableFrom": "rapport_import_items",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "rapport_import_items_movement_id_stock_movements_id_fk": {
+          "name": "rapport_import_items_movement_id_stock_movements_id_fk",
+          "tableFrom": "rapport_import_items",
+          "tableTo": "stock_movements",
+          "columnsFrom": [
+            "movement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rapport_imports": {
+      "name": "rapport_imports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "interfast_intervention_id": {
+          "name": "interfast_intervention_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "interfast_reference": {
+          "name": "interfast_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "technicien_name": {
+          "name": "technicien_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "client_name": {
+          "name": "client_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "intervention_date": {
+          "name": "intervention_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "raw_articles": {
+          "name": "raw_articles",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "confirmed_by": {
+          "name": "confirmed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rapport_imports_status_idx": {
+          "name": "rapport_imports_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rapport_imports_location_id_locations_id_fk": {
+          "name": "rapport_imports_location_id_locations_id_fk",
+          "tableFrom": "rapport_imports",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "location_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "rapport_imports_confirmed_by_users_id_fk": {
+          "name": "rapport_imports_confirmed_by_users_id_fk",
+          "tableFrom": "rapport_imports",
+          "tableTo": "users",
+          "columnsFrom": [
+            "confirmed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rapport_imports_interfast_intervention_id_unique": {
+          "name": "rapport_imports_interfast_intervention_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "interfast_intervention_id"
+          ]
         }
       },
       "policies": {},
@@ -908,6 +1513,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "totp_verified": {
+          "name": "totp_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "ip": {
           "name": "ip",
           "type": "text",
@@ -933,13 +1545,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "totp_verified": {
-          "name": "totp_verified",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "false"
         }
       },
       "indexes": {
@@ -979,8 +1584,12 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1076,8 +1685,12 @@
           "name": "stock_count_items_count_id_stock_counts_id_fk",
           "tableFrom": "stock_count_items",
           "tableTo": "stock_counts",
-          "columnsFrom": ["count_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "count_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1085,8 +1698,12 @@
           "name": "stock_count_items_article_id_articles_id_fk",
           "tableFrom": "stock_count_items",
           "tableTo": "articles",
-          "columnsFrom": ["article_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1094,8 +1711,12 @@
           "name": "stock_count_items_adjustment_movement_id_stock_movements_id_fk",
           "tableFrom": "stock_count_items",
           "tableTo": "stock_movements",
-          "columnsFrom": ["adjustment_movement_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "adjustment_movement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1141,7 +1762,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "\u0027draft\u0027"
+          "default": "'draft'"
         },
         "started_at": {
           "name": "started_at",
@@ -1206,8 +1827,12 @@
           "name": "stock_counts_location_id_locations_id_fk",
           "tableFrom": "stock_counts",
           "tableTo": "locations",
-          "columnsFrom": ["location_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "location_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1215,8 +1840,12 @@
           "name": "stock_counts_performed_by_users_id_fk",
           "tableFrom": "stock_counts",
           "tableTo": "users",
-          "columnsFrom": ["performed_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "performed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1226,7 +1855,9 @@
         "stock_counts_code_unique": {
           "name": "stock_counts_code_unique",
           "nullsNotDistinct": false,
-          "columns": ["code"]
+          "columns": [
+            "code"
+          ]
         }
       },
       "policies": {},
@@ -1254,14 +1885,14 @@
           "type": "numeric(14, 3)",
           "primaryKey": false,
           "notNull": true,
-          "default": "\u00270\u0027"
+          "default": "'0'"
         },
         "reserved_quantity": {
           "name": "reserved_quantity",
           "type": "numeric(14, 3)",
           "primaryKey": false,
           "notNull": true,
-          "default": "\u00270\u0027"
+          "default": "'0'"
         },
         "version": {
           "name": "version",
@@ -1300,8 +1931,12 @@
           "name": "stock_levels_article_id_articles_id_fk",
           "tableFrom": "stock_levels",
           "tableTo": "articles",
-          "columnsFrom": ["article_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1309,8 +1944,12 @@
           "name": "stock_levels_location_id_locations_id_fk",
           "tableFrom": "stock_levels",
           "tableTo": "locations",
-          "columnsFrom": ["location_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "location_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1318,12 +1957,20 @@
       "compositePrimaryKeys": {
         "stock_levels_article_id_location_id_pk": {
           "name": "stock_levels_article_id_location_id_pk",
-          "columns": ["article_id", "location_id"]
+          "columns": [
+            "article_id",
+            "location_id"
+          ]
         }
       },
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "stock_levels_non_negative": {
+          "name": "stock_levels_non_negative",
+          "value": "\"stock_levels\".\"quantity\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.stock_movements": {
@@ -1611,8 +2258,12 @@
           "name": "stock_movements_article_id_articles_id_fk",
           "tableFrom": "stock_movements",
           "tableTo": "articles",
-          "columnsFrom": ["article_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1620,8 +2271,12 @@
           "name": "stock_movements_location_id_locations_id_fk",
           "tableFrom": "stock_movements",
           "tableTo": "locations",
-          "columnsFrom": ["location_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "location_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1629,8 +2284,12 @@
           "name": "stock_movements_transfer_id_transfers_id_fk",
           "tableFrom": "stock_movements",
           "tableTo": "transfers",
-          "columnsFrom": ["transfer_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "transfer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1638,8 +2297,12 @@
           "name": "stock_movements_job_id_jobs_id_fk",
           "tableFrom": "stock_movements",
           "tableTo": "jobs",
-          "columnsFrom": ["job_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "job_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1647,8 +2310,12 @@
           "name": "stock_movements_created_by_users_id_fk",
           "tableFrom": "stock_movements",
           "tableTo": "users",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1656,8 +2323,12 @@
           "name": "stock_movements_voided_by_users_id_fk",
           "tableFrom": "stock_movements",
           "tableTo": "users",
-          "columnsFrom": ["voided_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "voided_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1805,8 +2476,12 @@
           "name": "transfer_items_transfer_id_transfers_id_fk",
           "tableFrom": "transfer_items",
           "tableTo": "transfers",
-          "columnsFrom": ["transfer_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "transfer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1814,8 +2489,12 @@
           "name": "transfer_items_article_id_articles_id_fk",
           "tableFrom": "transfer_items",
           "tableTo": "articles",
-          "columnsFrom": ["article_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1861,7 +2540,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "\u0027pending\u0027"
+          "default": "'pending'"
         },
         "created_by": {
           "name": "created_by",
@@ -2002,8 +2681,12 @@
           "name": "transfers_from_location_id_locations_id_fk",
           "tableFrom": "transfers",
           "tableTo": "locations",
-          "columnsFrom": ["from_location_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "from_location_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2011,8 +2694,12 @@
           "name": "transfers_to_location_id_locations_id_fk",
           "tableFrom": "transfers",
           "tableTo": "locations",
-          "columnsFrom": ["to_location_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "to_location_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2020,8 +2707,12 @@
           "name": "transfers_created_by_users_id_fk",
           "tableFrom": "transfers",
           "tableTo": "users",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2029,8 +2720,12 @@
           "name": "transfers_shipped_by_users_id_fk",
           "tableFrom": "transfers",
           "tableTo": "users",
-          "columnsFrom": ["shipped_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "shipped_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2038,8 +2733,12 @@
           "name": "transfers_received_by_users_id_fk",
           "tableFrom": "transfers",
           "tableTo": "users",
-          "columnsFrom": ["received_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "received_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2047,8 +2746,12 @@
           "name": "transfers_cancelled_by_users_id_fk",
           "tableFrom": "transfers",
           "tableTo": "users",
-          "columnsFrom": ["cancelled_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "cancelled_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2058,7 +2761,9 @@
         "transfers_code_unique": {
           "name": "transfers_code_unique",
           "nullsNotDistinct": false,
-          "columns": ["code"]
+          "columns": [
+            "code"
+          ]
         }
       },
       "policies": {},
@@ -2112,7 +2817,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "\u0027driver\u0027"
+          "default": "'driver'"
         },
         "pin_hash": {
           "name": "pin_hash",
@@ -2189,7 +2894,9 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": [
+            "email"
+          ]
         }
       },
       "policies": {},
@@ -2240,7 +2947,10 @@
       "compositePrimaryKeys": {
         "verification_tokens_identifier_token_pk": {
           "name": "verification_tokens_identifier_token_pk",
-          "columns": ["identifier", "token"]
+          "columns": [
+            "identifier",
+            "token"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2253,12 +2963,20 @@
     "public.job_status": {
       "name": "job_status",
       "schema": "public",
-      "values": ["open", "in_progress", "closed", "cancelled"]
+      "values": [
+        "open",
+        "in_progress",
+        "closed",
+        "cancelled"
+      ]
     },
     "public.location_type": {
       "name": "location_type",
       "schema": "public",
-      "values": ["warehouse", "truck"]
+      "values": [
+        "warehouse",
+        "truck"
+      ]
     },
     "public.movement_type": {
       "name": "movement_type",
@@ -2276,22 +2994,47 @@
     "public.stock_count_status": {
       "name": "stock_count_status",
       "schema": "public",
-      "values": ["draft", "finalized", "cancelled"]
+      "values": [
+        "draft",
+        "finalized",
+        "cancelled"
+      ]
     },
     "public.transfer_status": {
       "name": "transfer_status",
       "schema": "public",
-      "values": ["pending", "in_transit", "received", "cancelled"]
+      "values": [
+        "pending",
+        "in_transit",
+        "received",
+        "cancelled"
+      ]
     },
     "public.unit": {
       "name": "unit",
       "schema": "public",
-      "values": ["un", "pc", "cx", "kg", "g", "l", "ml", "m", "cm", "rl", "par"]
+      "values": [
+        "un",
+        "pc",
+        "cx",
+        "kg",
+        "g",
+        "l",
+        "ml",
+        "m",
+        "cm",
+        "rl",
+        "par"
+      ]
     },
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
-      "values": ["admin", "manager", "driver"]
+      "values": [
+        "admin",
+        "manager",
+        "driver"
+      ]
     }
   },
   "schemas": {},
