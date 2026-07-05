@@ -14,6 +14,7 @@ import {
   stockLevels,
   stockMovements,
   suppliers,
+  timeEntries,
   transferItems,
   transfers,
   users,
@@ -36,6 +37,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   sessions: many(sessions),
   movements: many(stockMovements, { relationName: 'movementCreatedBy' }),
+  timeEntries: many(timeEntries),
 }));
 
 // ============================================================
@@ -284,6 +286,17 @@ export const gasBottlesRelations = relations(gasBottles, ({ one }) => ({
   }),
   createdByUser: one(users, {
     fields: [gasBottles.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// ============================================================
+// TIME ENTRIES
+// ============================================================
+
+export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
+  user: one(users, {
+    fields: [timeEntries.userId],
     references: [users.id],
   }),
 }));

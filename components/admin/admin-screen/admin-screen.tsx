@@ -1,8 +1,9 @@
 'use client';
 
-import { IconMail, IconShieldCheck, IconUsers } from '@tabler/icons-react';
+import { IconClock, IconMail, IconShieldCheck, IconUsers } from '@tabler/icons-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback } from 'react';
+import { PointageView } from '@/components/admin/pointage/pointage-view';
 import { TotpSetup } from '@/components/admin/settings/totp-setup';
 import { UsersTable } from '@/components/admin/users/users-table';
 
@@ -27,6 +28,7 @@ interface AdminScreenProps {
 
 const TABS = [
   { id: 'usuarios',  label: 'Usuários',  icon: IconUsers       },
+  { id: 'pointage',  label: 'Pointage',  icon: IconClock       },
   { id: 'seguranca', label: 'Segurança', icon: IconShieldCheck  },
 ] as const;
 
@@ -68,6 +70,9 @@ export function AdminScreen({ initialUsers, totpEnabled, defaultTab = 'usuarios'
       {tab === 'usuarios' && (
         <UsersTable initialData={initialUsers} />
       )}
+
+      {/* Pointage */}
+      {tab === 'pointage' && <PointageView />}
 
       {/* Segurança */}
       {tab === 'seguranca' && (

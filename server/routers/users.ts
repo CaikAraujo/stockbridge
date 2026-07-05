@@ -1,10 +1,10 @@
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { z } from 'zod';
 import { db } from '@/db/client';
-import { sessions, users } from '@/db/schema';
+import { sessions, timeEntries, users } from '@/db/schema';
 import { idempotencySchema } from '@/lib/schemas/common';
 import {
   checkDriverEmailSchema,
@@ -168,6 +168,78 @@ export const usersRouter = router({
         });
 
       return user;
+    }),
+
+  // Histórico de ponto de um motorista por período (agrupado por dia)
+  getDriverPointage: adminProcedure
+    .input(
+      z.object({
+        userId: z.string().uuid(),
+        from: z.coerce.date().optional(),
+        to: z.coerce.date().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const startOfMonth = new Date();
+      startOfMonth.setUTCDate(1);
+      startOfMonth.setUTCHours(0, 0, 0, 0);
+
+      const fromDate = input.from ?? startOfMonth;
+
+      const toDate = input.to ? new Date(input.to) : new Date();
+      toDate.setUTCHours(23, 59, 59, 999);
+
+      const entries = await ctx.db
+        .select({
+          id: timeEntries.id,
+          type: timeEntries.type,
+          recordedAt: timeEntries.recordedAt,
+          latitude: timeEntries.latitude,
+          longitude: timeEntries.longitude,
+        })
+        .from(timeEntries)
+        .where(
+          and(
+            eq(timeEntries.userId, input.userId),
+            gte(timeEntries.recordedAt, fromDate),
+            lte(timeEntries.recordedAt, toDate),
+          ),
+        )
+        .orderBy(asc(timeEntries.recordedAt));
+
+      // Agrupa por dia (YYYY-MM-DD em UTC)
+      const byDay = new Map<
+        string,
+        { id: string; type: string; recordedAt: Date; latitude: string | null; longitude: string | null }[]
+      >();
+
+      for (const entry of entries) {
+        const day = entry.recordedAt.toISOString().slice(0, 10);
+        if (!byDay.has(day)) byDay.set(day, []);
+        byDay.get(day)!.push(entry);
+      }
+
+      return Array.from(byDay.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, dayEntries]) => {
+          const clockIn = dayEntries.find((e) => e.type === 'clock_in');
+          const clockOut = dayEntries.find((e) => e.type === 'clock_out');
+          const lunchOut = dayEntries.find((e) => e.type === 'lunch_out');
+          const lunchIn = dayEntries.find((e) => e.type === 'lunch_in');
+
+          let totalWorkMinutes = 0;
+          if (clockIn && clockOut) {
+            const total =
+              (clockOut.recordedAt.getTime() - clockIn.recordedAt.getTime()) / 60_000;
+            const lunchBreak =
+              lunchOut && lunchIn
+                ? (lunchIn.recordedAt.getTime() - lunchOut.recordedAt.getTime()) / 60_000
+                : 0;
+            totalWorkMinutes = Math.round(total - lunchBreak);
+          }
+
+          return { date, entries: dayEntries, totalWorkMinutes };
+        });
     }),
 
   deleteDriver: adminProcedure

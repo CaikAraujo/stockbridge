@@ -627,6 +627,34 @@ export const notifications = pgTable(
 );
 
 // ============================================================
+// TIME ENTRIES (pointage)
+// ============================================================
+
+export const timeEntries = pgTable(
+  'time_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    type: text('type', {
+      enum: ['clock_in', 'lunch_out', 'lunch_in', 'clock_out'],
+    }).notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    latitude: numeric('latitude', { precision: 10, scale: 7 }),
+    longitude: numeric('longitude', { precision: 10, scale: 7 }),
+    accuracy: numeric('accuracy', { precision: 8, scale: 2 }),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    userRecordedAtIdx: index('time_entries_user_recorded_at_idx').on(t.userId, t.recordedAt.desc()),
+  }),
+);
+
+// ============================================================
 // NOTAS PARA A MIGRATION (executar via SQL raw após `pnpm db:generate`)
 // ============================================================
 //

@@ -1,9 +1,20 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, gt, gte, inArray, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, lte } from 'drizzle-orm';
 import { z } from 'zod';
-import { articles, locations, stockLevels, stockMovements, transfers, users } from '@/db/schema';
-import { managerProcedure, protectedProcedure } from '@/server/procedures';
+import {
+  articles,
+  locations,
+  stockLevels,
+  stockMovements,
+  timeEntries,
+  transfers,
+  users,
+} from '@/db/schema';
+import { driverProcedure, managerProcedure, protectedProcedure } from '@/server/procedures';
 import { router } from '@/server/trpc';
+
+const TIME_ENTRY_ORDER = ['clock_in', 'lunch_out', 'lunch_in', 'clock_out'] as const;
+type TimeEntryType = (typeof TIME_ENTRY_ORDER)[number];
 
 export const driversRouter = router({
   // Lista motoristas ativos com seus dados (excluindo campos sensíveis)
@@ -124,6 +135,79 @@ export const driversRouter = router({
 
     return { truck, items };
   }),
+
+  // Entradas de ponto do motorista logado para hoje (UTC)
+  getTodayPointage: driverProcedure.query(async ({ ctx }) => {
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    return ctx.db
+      .select({
+        id: timeEntries.id,
+        type: timeEntries.type,
+        recordedAt: timeEntries.recordedAt,
+        latitude: timeEntries.latitude,
+        longitude: timeEntries.longitude,
+      })
+      .from(timeEntries)
+      .where(and(eq(timeEntries.userId, ctx.user.id), gte(timeEntries.recordedAt, startOfDay)))
+      .orderBy(asc(timeEntries.recordedAt));
+  }),
+
+  // Registra uma entrada de ponto (clock_in, lunch_out, lunch_in, clock_out)
+  recordPointage: driverProcedure
+    .input(
+      z.object({
+        type: z.enum(['clock_in', 'lunch_out', 'lunch_in', 'clock_out']),
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
+        accuracy: z.number().optional(),
+        idempotencyKey: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const startOfDay = new Date();
+      startOfDay.setUTCHours(0, 0, 0, 0);
+
+      const todayEntries = await ctx.db
+        .select({ type: timeEntries.type })
+        .from(timeEntries)
+        .where(and(eq(timeEntries.userId, ctx.user.id), gte(timeEntries.recordedAt, startOfDay)))
+        .orderBy(asc(timeEntries.recordedAt));
+
+      const lastType = todayEntries[todayEntries.length - 1]?.type as TimeEntryType | undefined;
+
+      if (lastType === 'clock_out') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Jornada já encerrada para hoje',
+        });
+      }
+
+      const nextIdx = lastType ? TIME_ENTRY_ORDER.indexOf(lastType) + 1 : 0;
+      const nextAllowed = TIME_ENTRY_ORDER[nextIdx];
+
+      if (input.type !== nextAllowed) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Ação inválida. Próximo passo: ${nextAllowed}`,
+        });
+      }
+
+      const [entry] = await ctx.db
+        .insert(timeEntries)
+        .values({
+          userId: ctx.user.id,
+          type: input.type,
+          latitude: input.latitude != null ? String(input.latitude) : null,
+          longitude: input.longitude != null ? String(input.longitude) : null,
+          accuracy: input.accuracy != null ? String(input.accuracy) : null,
+        })
+        .returning();
+
+      if (!entry) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      return entry;
+    }),
 
   // Busca artigo por SKU (para scanner QR)
   getArticleBySku: protectedProcedure
