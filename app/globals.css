@@ -52,6 +52,21 @@
   --cyan-ink:    oklch(0.50 0.11 215);
   --cyan-bg:     oklch(0.945 0.04 210);
 
+  /* ---- Driver PWA Design Tokens ---- */
+  --driver-blue:       #1D5FE0;
+  --driver-blue-dark:  #1148B8;
+  --driver-blue-soft:  #EAF0FB;
+  --driver-green:      #12905B;
+  --driver-green-soft: #EAF7F0;
+  --driver-navy:       #12203A;
+  --driver-muted:      #7A879C;
+  --driver-faint:      #A6B1C2;
+  --driver-bg:         #F2F5F9;
+  --driver-surface:    #FFFFFF;
+  --driver-border:     #E3E9F2;
+  --driver-tab-bg:     #E7ECF4;
+  --font-driver: var(--font-hanken-grotesk, 'Hanken Grotesk'), sans-serif;
+
   /* ---- Typography (resolvida via next/font/google) ---- */
   --font-ui:   var(--font-manrope, 'Manrope'), system-ui, sans-serif;
   --font-disp: var(--font-space-grotesk, 'Space Grotesk'), 'Manrope', sans-serif;

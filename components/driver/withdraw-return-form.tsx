@@ -1,13 +1,10 @@
 'use client';
 
 import {
-  IconArrowDown,
   IconArrowLeft,
-  IconArrowUp,
   IconCheck,
   IconLock,
   IconMinus,
-  IconPackage,
   IconPlus,
 } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
@@ -24,8 +21,6 @@ type Location = { id: string; name: string; code: string };
 type Action = 'withdraw' | 'return';
 
 const STEP = 0.5;
-
-// Teclado numérico 3×4 — '' é célula invisível, '⌫' é backspace
 const PIN_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'] as const;
 type PinKey = (typeof PIN_KEYS)[number];
 
@@ -38,7 +33,6 @@ interface Props {
 
 export function WithdrawReturnForm({ article, warehouse, truck, userName }: Props) {
   const router = useRouter();
-
   const [action, setAction] = useState<Action>('withdraw');
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -49,311 +43,175 @@ export function WithdrawReturnForm({ article, warehouse, truck, userName }: Prop
 
   const isOnline = useOnlineStatus();
   const { updateCount } = useOfflineQueue();
-
   const withdrawMutation = api.movements.withdraw.useMutation();
   const returnMutation = api.movements.return.useMutation();
   const verifyPinMutation = api.users.verifyPin.useMutation();
 
-  // Etapa 1 — abre o modal de PIN (não executa nada ainda)
   const handleConfirm = () => {
     if (qty <= 0) return;
-    setPin('');
-    setPinError('');
-    setShowPin(true);
+    setPin(''); setPinError(''); setShowPin(true);
   };
 
   const handlePinKey = (key: PinKey) => {
-    if (key === '⌫') {
-      setPin((p) => p.slice(0, -1));
-    } else if (key !== '' && pin.length < 4) {
-      setPin((p) => p + String(key));
-    }
+    if (key === '⌫') { setPin((p) => p.slice(0, -1)); }
+    else if (key !== '' && pin.length < 4) { setPin((p) => p + String(key)); }
   };
 
   const handlePinSubmit = async () => {
     if (pin.length !== 4 || submittingRef.current) return;
-    submittingRef.current = true;
-    setLoading(true);
-    setPinError('');
-
+    submittingRef.current = true; setLoading(true); setPinError('');
     try {
       const key = uuidv4();
-
       if (isOnline) {
         await verifyPinMutation.mutateAsync({ pin });
-
         if (action === 'withdraw') {
-          await withdrawMutation.mutateAsync({
-            articleId: article.id,
-            quantity: qty,
-            fromLocationId: warehouse.id,
-            toLocationId: truck.id,
-            idempotencyKey: key,
-          });
+          await withdrawMutation.mutateAsync({ articleId: article.id, quantity: qty, fromLocationId: warehouse.id, toLocationId: truck.id, idempotencyKey: key });
         } else {
-          await returnMutation.mutateAsync({
-            articleId: article.id,
-            quantity: qty,
-            fromLocationId: truck.id,
-            toLocationId: warehouse.id,
-            idempotencyKey: key,
-          });
+          await returnMutation.mutateAsync({ articleId: article.id, quantity: qty, fromLocationId: truck.id, toLocationId: warehouse.id, idempotencyKey: key });
         }
-        toast.success(
-          `${qty} ${article.unit} ${action === 'withdraw' ? 'retirado(s)' : 'devolvido(s)'} com sucesso`,
-        );
+        toast.success(`${qty} ${article.unit} ${action === 'withdraw' ? 'retirado(s)' : 'devolvido(s)'} com sucesso`);
       } else {
-        addToQueue({
-          id: key,
-          type: action,
-          payload: {
-            articleId: article.id,
-            quantity: qty,
-            fromLocationId: action === 'withdraw' ? warehouse.id : truck.id,
-            toLocationId: action === 'withdraw' ? truck.id : warehouse.id,
-            idempotencyKey: key,
-            articleName: article.name,
-            unit: article.unit,
-          },
-          createdAt: new Date().toISOString(),
-        });
+        addToQueue({ id: key, type: action, payload: { articleId: article.id, quantity: qty, fromLocationId: action === 'withdraw' ? warehouse.id : truck.id, toLocationId: action === 'withdraw' ? truck.id : warehouse.id, idempotencyKey: key, articleName: article.name, unit: article.unit }, createdAt: new Date().toISOString() });
         updateCount();
-        toast.info('Sem conexão. Operação salva — será enviada quando voltar online.', {
-          duration: 5000,
-        });
+        toast.info('Sem conexão. Operação salva — será enviada quando voltar online.', { duration: 5000 });
       }
-
-      setShowPin(false);
-      router.push('/driver');
+      setShowPin(false); router.push('/driver');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro';
-      if (msg.includes('PIN')) {
-        setPinError(msg);
-        setPin('');
-      } else {
-        toast.error(msg);
-        setShowPin(false);
-      }
-    } finally {
-      submittingRef.current = false;
-      setLoading(false);
-    }
+      if (msg.includes('PIN')) { setPinError(msg); setPin(''); }
+      else { toast.error(msg); setShowPin(false); }
+    } finally { submittingRef.current = false; setLoading(false); }
   };
 
   const decrease = () => setQty((q) => Math.max(STEP, parseFloat((q - STEP).toFixed(3))));
   const increase = () => setQty((q) => parseFloat((q + STEP).toFixed(3)));
-
   const isWithdraw = action === 'withdraw';
 
+  const confirmBg = isWithdraw ? '#1D5FE0' : '#12905B';
+  const confirmShadow = isWithdraw ? '0 8px 22px rgba(29,95,224,.35)' : '0 8px 22px rgba(18,144,91,.35)';
+
   return (
-    <div className="flex flex-1 flex-col">
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div className="bg-brand-500 px-4 pb-6 pt-10">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20"
-            aria-label="Voltar"
-          >
-            <IconArrowLeft size={18} className="text-white" />
-          </button>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
-            <IconPackage size={20} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-base font-medium text-white">{article.name}</h1>
-            <p className="text-xs text-white/75">SKU: {article.sku}</p>
-          </div>
+      <div style={{ background: '#FFF', padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 10px rgba(17,42,94,.05)', flexShrink: 0 }}>
+        <button type="button" onClick={() => router.back()} aria-label="Voltar"
+          style={{ width: 38, height: 38, borderRadius: '50%', background: '#F2F5F9', display: 'grid', placeItems: 'center', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+          <IconArrowLeft size={17} color="#12203A" />
+        </button>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ font: '700 16px var(--font-driver)', color: '#12203A', letterSpacing: '-.01em' }}>{article.name}</div>
+          <div style={{ font: '500 12px var(--font-driver)', color: '#7A879C' }}>SKU {article.sku}</div>
         </div>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-auto p-4">
-        {/* Seleção de ação */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setAction('withdraw')}
-            className={`flex flex-col items-center gap-2 rounded-card border-2 p-4 transition-colors ${
-              isWithdraw ? 'border-brand-500 bg-brand-50' : 'border-surface-border bg-white'
-            }`}
-          >
-            <div
-              className={`flex h-10 w-10 items-center justify-center rounded-full ${isWithdraw ? 'bg-brand-500' : 'bg-surface'}`}
-            >
-              <IconArrowDown
-                size={20}
-                className={isWithdraw ? 'text-white' : 'text-text-secondary'}
-              />
-            </div>
-            <span
-              className={`text-sm font-medium ${isWithdraw ? 'text-brand-500' : 'text-text-secondary'}`}
-            >
-              Retirada
-            </span>
-            <span className="text-center text-xs text-text-muted">Depósito → Caminhão</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setAction('return')}
-            className={`flex flex-col items-center gap-2 rounded-card border-2 p-4 transition-colors ${
-              !isWithdraw ? 'border-status-ok bg-green-50' : 'border-surface-border bg-white'
-            }`}
-          >
-            <div
-              className={`flex h-10 w-10 items-center justify-center rounded-full ${!isWithdraw ? 'bg-status-ok' : 'bg-surface'}`}
-            >
-              <IconArrowUp
-                size={20}
-                className={!isWithdraw ? 'text-white' : 'text-text-secondary'}
-              />
-            </div>
-            <span
-              className={`text-sm font-medium ${!isWithdraw ? 'text-status-ok' : 'text-text-secondary'}`}
-            >
-              Devolução
-            </span>
-            <span className="text-center text-xs text-text-muted">Caminhão → Depósito</span>
-          </button>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, padding: 18, overflow: 'auto' }}>
+        {/* Seletor de modo */}
+        <div style={{ background: '#E7ECF4', borderRadius: 100, padding: 5, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+          {(['withdraw', 'return'] as const).map((a) => {
+            const active = action === a;
+            const activeColor = a === 'withdraw' ? '#1D5FE0' : '#12905B';
+            return (
+              <button key={a} type="button" onClick={() => setAction(a)} style={{
+                background: active ? '#FFF' : 'transparent', borderRadius: 100, padding: 12,
+                textAlign: 'center', border: 'none', cursor: 'pointer',
+                boxShadow: active ? '0 2px 8px rgba(17,42,94,.1)' : 'none',
+                font: `${active ? 700 : 600} 14px var(--font-driver)`,
+                color: active ? activeColor : '#7A879C', transition: 'all .15s',
+              }}>
+                {a === 'withdraw' ? '↓ Retirada' : '↑ Devolução'}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Seletor de quantidade */}
-        <div className="rounded-card border border-surface-border bg-white p-5">
-          <p className="mb-4 text-center text-sm font-medium text-text-primary">
-            Quantidade ({article.unit})
-          </p>
-          <div className="flex items-center justify-center gap-6">
-            <button
-              type="button"
-              onClick={decrease}
-              aria-label="Diminuir"
-              className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-surface-border bg-surface transition-colors hover:border-brand-500 hover:bg-brand-50"
-            >
-              <IconMinus size={20} className="text-text-secondary" />
+        {/* Card de quantidade */}
+        <div style={{ background: '#FFF', borderRadius: 22, padding: '24px 20px', boxShadow: '0 6px 20px rgba(17,42,94,.07)', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
+          <span style={{ font: '600 13px var(--font-driver)', color: '#7A879C' }}>
+            Quantidade em {article.unit}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <button type="button" onClick={decrease} aria-label="Diminuir"
+              style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', background: '#F2F5F9', font: '500 26px var(--font-driver)', color: '#12203A', cursor: 'pointer' }}>
+              <IconMinus size={22} color="#12203A" />
             </button>
-            <div className="text-center">
-              <p className="text-4xl font-medium text-text-primary">{qty.toFixed(1)}</p>
-              <p className="text-sm text-text-muted">{article.unit}</p>
-            </div>
-            <button
-              type="button"
-              onClick={increase}
-              aria-label="Aumentar"
-              className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-surface-border bg-surface transition-colors hover:border-brand-500 hover:bg-brand-50"
-            >
-              <IconPlus size={20} className="text-text-secondary" />
+            <span style={{ font: '800 52px var(--font-driver)', color: '#12203A', minWidth: 110, textAlign: 'center', letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums' }}>
+              {qty.toFixed(1)}
+            </span>
+            <button type="button" onClick={increase} aria-label="Aumentar"
+              style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', background: '#1D5FE0', font: '500 26px var(--font-driver)', color: '#FFF', cursor: 'pointer', boxShadow: '0 4px 12px rgba(29,95,224,.35)' }}>
+              <IconPlus size={22} color="#fff" />
             </button>
           </div>
-          <input
-            type="number"
-            step={STEP}
-            min={STEP}
-            value={qty}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              if (!Number.isNaN(v) && v > 0) setQty(v);
-            }}
-            className="mt-4 w-full rounded-btn border border-surface-border px-3 py-2 text-center text-sm text-text-primary focus:border-brand-500 focus:outline-none"
-          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[5, 10, 50].map((n) => (
+              <button key={n} type="button" onClick={() => setQty((q) => parseFloat((q + n).toFixed(3)))}
+                style={{ padding: '9px 18px', background: '#F2F5F9', border: 'none', borderRadius: 100, font: '700 13px var(--font-driver)', color: '#12203A', cursor: 'pointer' }}>
+                +{n}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Resumo da operação */}
-        <div className="rounded-btn bg-surface px-4 py-3 text-xs text-text-secondary">
-          {isWithdraw ? (
-            <p>
-              <strong>{warehouse.name}</strong> → <strong>{truck.name}</strong>
-            </p>
-          ) : (
-            <p>
-              <strong>{truck.name}</strong> → <strong>{warehouse.name}</strong>
-            </p>
-          )}
-          <p className="mt-0.5">Operador: {userName}</p>
+        {/* Info de rota */}
+        <div style={{ background: '#FFF', borderRadius: 18, padding: '14px 18px', boxShadow: '0 4px 14px rgba(17,42,94,.05)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ font: '700 13px var(--font-driver)', color: '#12203A' }}>
+              {isWithdraw ? warehouse.name : truck.name}
+            </span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D5FE0" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <span style={{ font: '700 13px var(--font-driver)', color: '#12203A' }}>
+              {isWithdraw ? truck.name : warehouse.name}
+            </span>
+          </div>
+          <span style={{ font: '500 12px var(--font-driver)', color: '#7A879C' }}>Operador · {userName}</span>
         </div>
-      </div>
 
-      {/* Botão principal — abre modal de PIN */}
-      <div className="border-t border-surface-border bg-white p-4">
-        <button
-          type="button"
-          onClick={handleConfirm}
-          disabled={qty <= 0}
-          className={`flex w-full items-center justify-center gap-2 rounded-btn py-4 text-base font-medium text-white transition-colors disabled:opacity-40 ${
-            isWithdraw ? 'bg-brand-500 hover:bg-brand-600' : 'bg-status-ok hover:bg-green-700'
-          }`}
-        >
-          <IconCheck size={20} />
-          Confirmar {isWithdraw ? 'Retirada' : 'Devolução'}
+        <div style={{ flex: 1 }} />
+
+        {/* Botão confirmar */}
+        <button type="button" onClick={handleConfirm} disabled={qty <= 0}
+          style={{ height: 58, border: 'none', borderRadius: 100, background: confirmBg, color: '#FFF', font: '700 16px var(--font-driver)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: confirmShadow, width: '100%', opacity: qty <= 0 ? 0.4 : 1 }}>
+          <IconCheck size={18} color="#fff" strokeWidth={2.4} />
+          Confirmar {isWithdraw ? 'retirada' : 'devolução'} · {qty.toFixed(1)} {article.unit}
         </button>
       </div>
 
       {/* Modal PIN — bottom sheet */}
       {showPin && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40">
-          <div className="w-full rounded-t-2xl bg-white p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50">
-                <IconLock size={20} className="text-brand-500" />
+        <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(10,25,48,.45)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowPin(false); }}>
+          <div style={{ width: '100%', borderRadius: '26px 26px 0 0', background: '#FFF', padding: '14px 20px 32px', boxShadow: '0 -12px 40px rgba(10,25,48,.25)' }}>
+            <div style={{ width: 40, height: 4, borderRadius: 100, background: '#E3E9F2', margin: '0 auto 16px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#EAF0FB', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <IconLock size={18} color="#1D5FE0" />
               </div>
               <div>
-                <p className="text-sm font-medium text-text-primary">Confirme com seu PIN</p>
-                <p className="text-xs text-text-secondary">4 dígitos para autorizar a operação</p>
+                <p style={{ font: '700 14px var(--font-driver)', color: '#12203A', margin: 0 }}>Confirme com seu PIN</p>
+                <p style={{ font: '500 12px var(--font-driver)', color: '#7A879C', margin: 0 }}>4 dígitos para autorizar</p>
               </div>
             </div>
-
-            {/* Dots de progresso */}
-            <div className="mb-2 flex justify-center gap-3">
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 8 }}>
               {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={`h-3 w-3 rounded-full transition-colors ${
-                    i < pin.length ? 'bg-brand-500' : 'bg-surface-border'
-                  }`}
-                />
+                <div key={i} style={{ width: 12, height: 12, borderRadius: '50%', background: i < pin.length ? '#1D5FE0' : '#E3E9F2', transition: 'background .15s' }} />
               ))}
             </div>
-
-            {pinError && (
-              <p className="mb-3 text-center text-xs text-status-critical">{pinError}</p>
-            )}
-
-            {/* Teclado numérico 3×4 */}
-            <div className="mb-4 grid grid-cols-3 gap-2">
+            {pinError && <p style={{ textAlign: 'center', font: '500 12px var(--font-driver)', color: '#D93636', marginBottom: 8 }}>{pinError}</p>}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
               {PIN_KEYS.map((key) => (
-                <button
-                  key={String(key)}
-                  type="button"
-                  onClick={() => handlePinKey(key)}
-                  disabled={loading}
-                  className={`rounded-btn py-3.5 text-xl font-medium transition-colors disabled:opacity-50 ${
-                    key === ''
-                      ? 'invisible'
-                      : key === '⌫'
-                        ? 'bg-surface text-text-secondary hover:bg-surface-border'
-                        : 'bg-surface text-text-primary hover:bg-brand-50'
-                  }`}
-                >
+                <button key={String(key)} type="button" onClick={() => handlePinKey(key)} disabled={loading}
+                  style={{ borderRadius: 14, padding: '14px 0', font: '600 20px var(--font-driver)', border: 'none', cursor: key === '' ? 'default' : 'pointer', background: key === '' ? 'transparent' : '#F2F5F9', color: '#12203A', visibility: key === '' ? 'hidden' : 'visible', opacity: loading ? 0.5 : 1 }}>
                   {key}
                 </button>
               ))}
             </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPin(false)}
-                disabled={loading}
-                className="flex-1 rounded-btn border border-surface-border py-3 text-sm text-text-secondary hover:bg-surface disabled:opacity-50"
-              >
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" onClick={() => setShowPin(false)} disabled={loading}
+                style={{ flex: 1, borderRadius: 100, border: '1.5px solid #E3E9F2', padding: '14px 0', font: '600 14px var(--font-driver)', color: '#7A879C', background: '#FFF', cursor: 'pointer' }}>
                 Cancelar
               </button>
-              <button
-                type="button"
-                onClick={handlePinSubmit}
-                disabled={pin.length !== 4 || loading}
-                className="flex-1 rounded-btn bg-brand-500 py-3 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-40"
-              >
+              <button type="button" onClick={() => void handlePinSubmit()} disabled={pin.length !== 4 || loading}
+                style={{ flex: 1, borderRadius: 100, border: 'none', padding: '14px 0', font: '700 14px var(--font-driver)', color: '#FFF', background: '#1D5FE0', cursor: 'pointer', opacity: pin.length !== 4 || loading ? 0.4 : 1, boxShadow: '0 4px 12px rgba(29,95,224,.35)' }}>
                 {loading ? 'Verificando…' : 'Confirmar'}
               </button>
             </div>

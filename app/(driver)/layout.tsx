@@ -5,7 +5,7 @@ import { OfflineIndicator } from '@/components/driver/offline-indicator';
 import { auth } from '@/lib/auth/config';
 
 export const metadata: Metadata = {
-  themeColor: '#064875',
+  themeColor: '#1D5FE0',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
@@ -23,7 +23,10 @@ export default async function DriverLayout({ children }: { children: React.React
   }
 
   return (
-    <div className="mx-auto flex h-screen max-w-[430px] flex-col overflow-hidden bg-surface">
+    <div
+      className="mx-auto flex h-screen max-w-[430px] flex-col overflow-hidden"
+      style={{ background: 'var(--driver-bg)', fontFamily: 'var(--font-driver)' }}
+    >
       <OfflineIndicator />
       <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
       <Toaster position="top-center" richColors />

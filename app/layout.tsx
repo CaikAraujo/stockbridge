@@ -1,8 +1,15 @@
 import type { Metadata } from 'next';
-import { JetBrains_Mono, Manrope, Space_Grotesk } from 'next/font/google';
+import { Hanken_Grotesk, JetBrains_Mono, Manrope, Space_Grotesk } from 'next/font/google';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { TRPCProvider } from '@/lib/trpc/provider';
 import './globals.css';
+
+/* Hanken Grotesk — --font-driver, driver PWA */
+const hankenGrotesk = Hanken_Grotesk({
+  variable: '--font-hanken-grotesk',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+});
 
 /* Space Grotesk — --font-disp, headings */
 const spaceGrotesk = Space_Grotesk({
@@ -34,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      className={`${spaceGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${hankenGrotesk.variable} ${spaceGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <TRPCProvider>

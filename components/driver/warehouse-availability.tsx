@@ -15,58 +15,46 @@ export function WarehouseAvailability() {
   );
 
   return (
-    <div className="flex-1 overflow-auto px-4 pt-4 pb-6">
-      {/* Campo de busca */}
-      <div className="relative mb-4">
-        <IconSearch
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-        />
+    <div style={{ flex: 1, overflow: 'auto', paddingBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Campo de busca — pill */}
+      <div style={{ background: '#FFF', borderRadius: 100, height: 50, display: 'flex', alignItems: 'center', gap: 10, padding: '0 18px', boxShadow: '0 4px 14px rgba(17,42,94,.06)' }}>
+        <IconSearch size={18} color="#7A879C" style={{ flexShrink: 0 }} />
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar artigo ou SKU…"
-          className="w-full rounded-btn border border-surface-border bg-white py-3 pl-9 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:outline-none"
+          style={{ border: 'none', outline: 'none', flex: 1, font: '500 14px var(--font-driver)', color: '#12203A', background: 'transparent' }}
         />
       </div>
 
       {/* Skeleton de carregamento */}
       {isLoading && (
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((n) => (
-            <div
-              key={n}
-              className="animate-pulse rounded-card border border-surface-border bg-white p-4"
-            >
-              <div className="mb-2 h-4 w-2/3 rounded bg-surface-border" />
-              <div className="mb-3 h-3 w-1/3 rounded bg-surface-border" />
-              <div className="h-8 w-1/2 rounded bg-surface-border" />
+        <>
+          {[1, 2, 3].map((n) => (
+            <div key={n} style={{ background: '#FFF', borderRadius: 18, padding: 18, boxShadow: '0 4px 14px rgba(17,42,94,.06)' }}>
+              <div style={{ height: 14, width: '60%', borderRadius: 8, background: '#E3E9F2', marginBottom: 8, animation: 'pulse 1.5s infinite' }} />
+              <div style={{ height: 11, width: '30%', borderRadius: 8, background: '#E3E9F2', marginBottom: 12 }} />
+              <div style={{ height: 26, width: '40%', borderRadius: 8, background: '#E3E9F2' }} />
             </div>
           ))}
-        </div>
+        </>
       )}
 
       {/* Estado vazio */}
       {!isLoading && filtered.length === 0 && (
-        <div className="flex flex-col items-center py-12 text-text-muted">
-          <IconPackage size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">
-            {search
-              ? 'Nenhum artigo encontrado para esta busca'
-              : 'Nenhum artigo disponível no depósito'}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 0', gap: 8 }}>
+          <IconPackage size={40} color="#A6B1C2" style={{ opacity: 0.4 }} />
+          <p style={{ font: '500 13px var(--font-driver)', color: '#A6B1C2', margin: 0, textAlign: 'center' }}>
+            {search ? 'Nenhum artigo encontrado para esta busca' : 'Nenhum artigo disponível no depósito'}
           </p>
         </div>
       )}
 
       {/* Lista de artigos */}
-      {!isLoading && filtered.length > 0 && (
-        <div className="space-y-3">
-          {filtered.map((item) => (
-            <ArticleCard key={item.articleId} item={item} />
-          ))}
-        </div>
-      )}
+      {!isLoading && filtered.map((item) => (
+        <ArticleCard key={item.articleId} item={item} />
+      ))}
     </div>
   );
 }
@@ -77,11 +65,7 @@ type ArticleItem = {
   sku: string;
   unit: string;
   warehouseQty: number;
-  driversWithItem: Array<{
-    driverName: string;
-    truckName: string;
-    quantity: number;
-  }>;
+  driversWithItem: Array<{ driverName: string; truckName: string; quantity: number }>;
 };
 
 function ArticleCard({ item }: { item: ArticleItem }) {
@@ -89,62 +73,49 @@ function ArticleCard({ item }: { item: ArticleItem }) {
   const hasTrucks = item.driversWithItem.length > 0;
 
   return (
-    <div className="rounded-card border border-surface-border bg-white">
-      <div className="px-4 py-4">
-        {/* Nome + SKU */}
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-text-primary">{item.name}</p>
-            <p className="mt-0.5 font-mono text-xs text-text-muted">{item.sku}</p>
-          </div>
+    <div style={{ background: '#FFF', borderRadius: 18, boxShadow: '0 4px 14px rgba(17,42,94,.06)', overflow: 'hidden' }}>
+      <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div>
+          <div style={{ font: '700 15px var(--font-driver)', color: '#12203A' }}>{item.name}</div>
+          <div style={{ fontFamily: 'ui-monospace,Menlo,monospace', fontSize: 12, color: '#A6B1C2', marginTop: 2, letterSpacing: '.04em' }}>{item.sku}</div>
         </div>
-
-        {/* Quantidade no depósito */}
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl font-bold text-status-ok">
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ font: '800 26px var(--font-driver)', color: '#12905B', letterSpacing: '-.02em', fontVariantNumeric: 'tabular-nums' }}>
             {item.warehouseQty.toFixed(3)}
           </span>
-          <span className="text-sm font-medium text-status-ok">{item.unit}</span>
-          <span className="ml-1 text-xs text-text-muted">no depósito</span>
+          <span style={{ font: '700 13px var(--font-driver)', color: '#12905B' }}>{item.unit}</span>
+          <span style={{ font: '500 12px var(--font-driver)', color: '#7A879C' }}>no depósito</span>
         </div>
       </div>
 
-      {/* Seção "Também em caminhões" */}
+      {/* Expandir caminhões */}
       {hasTrucks && (
-        <div className="border-t border-surface-border">
-          <button
-            type="button"
-            onClick={() => setExpanded((prev) => !prev)}
-            className="flex w-full items-center justify-between px-4 py-2.5 text-left"
-          >
-            <div className="flex items-center gap-1.5">
-              <IconTruck size={13} className="text-text-muted" />
-              <span className="text-xs text-text-muted">
-                Também em caminhões ({item.driversWithItem.length})
-              </span>
-            </div>
-            <span className="text-xs text-text-muted">{expanded ? '▲' : '▼'}</span>
+        <>
+          <button type="button" onClick={() => setExpanded((p) => !p)}
+            style={{ borderTop: '1px solid #EDF1F7', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: '#FAFBFD', width: '100%' }}>
+            <IconTruck size={16} color="#7A879C" style={{ flexShrink: 0 }} />
+            <span style={{ font: '600 13px var(--font-driver)', color: '#7A879C', flex: 1, textAlign: 'left' }}>
+              Também em caminhões ({item.driversWithItem.length})
+            </span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A879C" strokeWidth="2.2"
+              style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform .2s', flexShrink: 0 }}>
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
           </button>
-
           {expanded && (
-            <div className="divide-y divide-surface-border border-t border-surface-border">
+            <div style={{ borderTop: '1px solid #EDF1F7', padding: '6px 18px 12px', background: '#FAFBFD', display: 'flex', flexDirection: 'column' }}>
               {item.driversWithItem.map((driver, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between px-4 py-2.5"
-                >
-                  <div>
-                    <p className="text-xs font-medium text-text-secondary">{driver.driverName}</p>
-                    <p className="text-xs text-text-muted">{driver.truckName}</p>
-                  </div>
-                  <span className="text-xs font-medium text-text-secondary">
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1D5FE0', flexShrink: 0, display: 'inline-block' }} />
+                  <span style={{ font: '600 13px var(--font-driver)', color: '#12203A', flex: 1 }}>{driver.driverName}</span>
+                  <span style={{ font: '700 13px var(--font-driver)', color: '#12203A', fontVariantNumeric: 'tabular-nums' }}>
                     {driver.quantity.toFixed(3)} {item.unit}
                   </span>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
