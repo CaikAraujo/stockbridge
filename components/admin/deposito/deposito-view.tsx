@@ -1,11 +1,13 @@
 'use client';
 
-import { IconSearch, IconPackage, IconPlus } from '@tabler/icons-react';
+import { IconSearch, IconPackage, IconPlus, IconBuildingWarehouse, IconLoader2 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { api } from '@/lib/trpc/client';
 import { EmptyState } from '@/components/admin/shared/empty-state';
 import { SbTable } from '@/components/admin/shared/sb-table';
 import { StateBadge } from '@/components/admin/shared/state-badge';
@@ -66,14 +68,131 @@ export function DepositoView({
   const [search, setSearch] = useState('');
   const router = useRouter();
 
+  const [warehouseName, setWarehouseName] = useState('Depósito Central');
+  const [warehouseCode, setWarehouseCode] = useState('WH-01');
+
+  const setupWarehouse = api.locations.setupWarehouse.useMutation({
+    onSuccess: () => {
+      toast.success('Depósito criado! Recarregando…');
+      router.refresh();
+    },
+    onError: (err) => toast.error(err.message ?? 'Erro ao criar depósito'),
+  });
+
   if (!warehouse) {
     return (
-      <div className="card">
-        <EmptyState
-          icon={IconPackage}
-          title="Nenhum depósito configurado"
-          sub="Configure um depósito para começar a gerir o estoque."
-        />
+      <div className="card" style={{ padding: 'var(--card-pad)' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 24,
+            padding: '40px 24px',
+            maxWidth: 440,
+            margin: '0 auto',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              background: 'var(--primary-soft, #EEF3FF)',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <IconBuildingWarehouse size={26} style={{ color: 'var(--primary, #1D5FE0)' }} />
+          </div>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 6px', color: 'var(--ink)' }}>
+              Nenhum depósito configurado
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+              Crie o depósito central para começar a gerir o estoque e importar artigos via CSV.
+            </p>
+          </div>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', textAlign: 'left' }}>
+                Nome do depósito
+              </label>
+              <input
+                value={warehouseName}
+                onChange={(e) => setWarehouseName(e.target.value)}
+                style={{
+                  height: 40,
+                  border: '1.5px solid var(--border-soft)',
+                  borderRadius: 10,
+                  padding: '0 12px',
+                  fontSize: 14,
+                  color: 'var(--ink)',
+                  background: '#fff',
+                  outline: 'none',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', textAlign: 'left' }}>
+                Código
+              </label>
+              <input
+                value={warehouseCode}
+                onChange={(e) => setWarehouseCode(e.target.value.toUpperCase())}
+                style={{
+                  height: 40,
+                  border: '1.5px solid var(--border-soft)',
+                  borderRadius: 10,
+                  padding: '0 12px',
+                  fontSize: 14,
+                  fontFamily: 'monospace',
+                  color: 'var(--ink)',
+                  background: '#fff',
+                  outline: 'none',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              disabled={setupWarehouse.isPending || !warehouseName.trim()}
+              onClick={() =>
+                setupWarehouse.mutate({
+                  name: warehouseName.trim(),
+                  code: warehouseCode.trim() || 'WH-01',
+                  idempotencyKey: crypto.randomUUID(),
+                })
+              }
+              style={{
+                height: 42,
+                borderRadius: 100,
+                border: 'none',
+                background: 'var(--primary, #1D5FE0)',
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: setupWarehouse.isPending ? 'not-allowed' : 'pointer',
+                opacity: setupWarehouse.isPending ? 0.8 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                width: '100%',
+              }}
+            >
+              {setupWarehouse.isPending ? (
+                <><IconLoader2 size={15} style={{ animation: 'spin .8s linear infinite' }} /> Criando…</>
+              ) : (
+                <><IconBuildingWarehouse size={15} /> Criar depósito</>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

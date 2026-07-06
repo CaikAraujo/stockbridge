@@ -90,6 +90,34 @@ export const locationsRouter = router({
     return { warehouse, items, movements };
   }),
 
+  setupWarehouse: adminProcedure
+    .input(
+      z
+        .object({
+          name: z.string().min(2).max(100),
+          code: z.string().min(1).max(20).default('WH-01'),
+        })
+        .merge(idempotencySchema),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { idempotencyKey: _k, ...data } = input;
+
+      const existing = await ctx.db.query.locations.findFirst({
+        where: (l, { eq: eqFn }) => eqFn(l.type, 'warehouse'),
+        columns: { id: true },
+      });
+      if (existing) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Já existe um depósito configurado.' });
+      }
+
+      const [loc] = await ctx.db
+        .insert(locations)
+        .values({ ...data, type: 'warehouse' })
+        .returning();
+      if (!loc) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      return loc;
+    }),
+
   create: adminProcedure
     .input(
       z
