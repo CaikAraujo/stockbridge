@@ -1,8 +1,9 @@
 'use client';
 
-import { IconClock, IconMail, IconShieldCheck, IconUsers } from '@tabler/icons-react';
+import { IconBuilding, IconClock, IconMail, IconShieldCheck, IconUsers } from '@tabler/icons-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback } from 'react';
+import { CompanySettingsForm } from '@/components/admin/company/company-settings-form';
 import { PointageView } from '@/components/admin/pointage/pointage-view';
 import { TotpSetup } from '@/components/admin/settings/totp-setup';
 import { UsersTable } from '@/components/admin/users/users-table';
@@ -30,6 +31,7 @@ const TABS = [
   { id: 'usuarios',  label: 'Usuários',  icon: IconUsers       },
   { id: 'pointage',  label: 'Pointage',  icon: IconClock       },
   { id: 'seguranca', label: 'Segurança', icon: IconShieldCheck  },
+  { id: 'empresa',   label: 'Empresa',   icon: IconBuilding     },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -73,6 +75,13 @@ export function AdminScreen({ initialUsers, totpEnabled, defaultTab = 'usuarios'
 
       {/* Pointage */}
       {tab === 'pointage' && <PointageView />}
+
+      {/* Empresa */}
+      {tab === 'empresa' && (
+        <div style={{ maxWidth: 620 }}>
+          <CompanySettingsForm />
+        </div>
+      )}
 
       {/* Segurança */}
       {tab === 'seguranca' && (

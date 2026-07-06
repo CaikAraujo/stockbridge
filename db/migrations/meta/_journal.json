@@ -71,6 +71,13 @@
       "when": 1783277005191,
       "tag": "0009_wise_warstar",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783345317190,
+      "tag": "0010_chemical_psylocke",
+      "breakpoints": true
     }
   ]
 }

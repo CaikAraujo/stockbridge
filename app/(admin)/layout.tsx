@@ -11,13 +11,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session?.user) redirect('/login');
   if (session.user.role === 'driver') redirect('/driver');
 
+  const headersList = await headers();
+  const pathname = headersList.get('x-pathname') ?? '';
+
+  const isTotpSetupPage = pathname.includes('/settings/totp');
+  const isOnboardingPage = pathname.includes('/onboarding');
+
   // Admins e managers com TOTP ativo devem ter verificado o código nesta sessão
   if (session.user.role === 'admin' || session.user.role === 'manager') {
-    const headersList = await headers();
-    const pathname = headersList.get('x-pathname') ?? '';
-    const isTotpSetupPage = pathname.includes('/settings/totp');
-
-    if (!isTotpSetupPage) {
+    if (!isTotpSetupPage && !isOnboardingPage) {
       const user = await db.query.users.findFirst({
         where: (u) => eq(u.id, session.user.id),
         columns: { totpSecret: true },
@@ -43,6 +45,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         redirect('/login/totp');
       }
     }
+  }
+
+  // Onboarding guard: se não houver empresa configurada, redireciona para /onboarding
+  if (!isOnboardingPage) {
+    const company = await db.query.companySettings.findFirst({
+      columns: { onboardingCompletedAt: true },
+    });
+
+    if (!company?.onboardingCompletedAt) {
+      redirect('/onboarding');
+    }
+  }
+
+  // Página de onboarding é standalone (sem sidebar)
+  if (isOnboardingPage) {
+    return <>{children}</>;
   }
 
   return (

@@ -1,6 +1,7 @@
 import { router } from '@/server/trpc';
 import { articlesRouter } from './articles';
 import { authRouter } from './auth';
+import { companyRouter } from './company';
 import { dashboardRouter } from './dashboard';
 import { driversRouter } from './drivers';
 import { gasBottlesRouter } from './gas-bottles';
@@ -14,6 +15,7 @@ import { usersRouter } from './users';
 export const appRouter = router({
   auth: authRouter,
   articles: articlesRouter,
+  company: companyRouter,
   locations: locationsRouter,
   movements: movementsRouter,
   dashboard: dashboardRouter,

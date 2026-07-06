@@ -655,6 +655,27 @@ export const timeEntries = pgTable(
 );
 
 // ============================================================
+// COMPANY SETTINGS (single-tenant — exatamente 1 linha)
+// ============================================================
+
+export const companySettings = pgTable('company_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  segment: text('segment').notNull(),
+  country: text('country').notNull().default('CH'),
+  city: text('city'),
+  phone: text('phone'),
+  taxId: text('tax_id'),
+  employeeCount: integer('employee_count'),
+  vehicleCount: integer('vehicle_count'),
+  contactEmail: text('contact_email'),
+  logoUrl: text('logo_url'),
+  onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================
 // NOTAS PARA A MIGRATION (executar via SQL raw após `pnpm db:generate`)
 // ============================================================
 //
