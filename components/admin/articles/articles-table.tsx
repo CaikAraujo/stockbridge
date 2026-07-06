@@ -2,10 +2,12 @@
 
 import { IconEdit, IconPackage, IconPlus, IconPrinter, IconSearch, IconTrash } from '@tabler/icons-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { generateQRLabelsPDF } from '@/lib/qr-pdf';
 import { api } from '@/lib/trpc/client';
+import { CsvImportArticlesDialog } from '@/components/admin/articles/csv-import-articles-dialog';
 import { EmptyState } from '@/components/admin/shared/empty-state';
 import { SbTable } from '@/components/admin/shared/sb-table';
 import { StateBadge } from '@/components/admin/shared/state-badge';
@@ -31,10 +33,15 @@ type ArticlesListResult = {
 type ArtRow = Record<string, unknown> & Article;
 
 export function ArticlesTable({ initialData }: { initialData: ArticlesListResult }) {
+  const router = useRouter();
   const [search,   setSearch]   = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [printing, setPrinting] = useState(false);
   const [data,     setData]     = useState(initialData);
+
+  useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
 
   const deleteArticle = api.articles.delete.useMutation();
 
@@ -133,6 +140,7 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
           <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>
             {filtered.length} de {data.total} artigos
           </span>
+          <CsvImportArticlesDialog onSuccess={() => router.refresh()} />
           <Link href="/articles/new" className="btn btn-primary btn-sm" style={{ gap: 6 }}>
             <IconPlus size={14} /> Novo artigo
           </Link>

@@ -1,10 +1,11 @@
 import { TRPCError } from '@trpc/server';
-import { and, count, eq, ilike } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray } from 'drizzle-orm';
 import { DatabaseError } from 'pg';
 import { z } from 'zod';
 import { articles } from '@/db/schema';
 import {
   articleCreateSchema,
+  articleImportCsvSchema,
   articleListSchema,
   articleUpdateSchema,
 } from '@/lib/schemas/articles';
@@ -95,5 +96,44 @@ export const articlesRouter = router({
         .set({ active: false, updatedAt: new Date() })
         .where(eq(articles.id, input.id));
       return { success: true };
+    }),
+
+  importCsv: adminProcedure
+    .input(articleImportCsvSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { rows } = input;
+
+      const skus = rows.map((r) => r.sku);
+      const existing = await ctx.db
+        .select({ sku: articles.sku })
+        .from(articles)
+        .where(inArray(articles.sku, skus));
+
+      const existingSkus = new Set(existing.map((e) => e.sku));
+      const skipped: string[] = [];
+      const toInsert: (typeof articles.$inferInsert)[] = [];
+
+      for (const row of rows) {
+        if (existingSkus.has(row.sku)) {
+          skipped.push(row.sku);
+        } else {
+          toInsert.push({
+            name: row.nome,
+            sku: row.sku,
+            unit: row.unidade,
+            minStock: row.minStock.toString(),
+            reorderPoint: row.reorderPoint.toString(),
+            active: true,
+          });
+        }
+      }
+
+      if (toInsert.length > 0) {
+        await ctx.db.transaction(async (tx) => {
+          await tx.insert(articles).values(toInsert);
+        });
+      }
+
+      return { imported: toInsert.length, skipped };
     }),
 });

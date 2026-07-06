@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import { paginationSchema } from './common';
 
-const unitEnum = z.enum(['un', 'pc', 'cx', 'kg', 'g', 'l', 'ml', 'm', 'cm', 'rl', 'par']);
+export const ARTICLE_UNITS = [
+  'un', 'pc', 'cx', 'kg', 'g', 'l', 'ml', 'm', 'cm', 'rl', 'par',
+] as const;
+
+export type ArticleUnit = (typeof ARTICLE_UNITS)[number];
+
+const unitEnum = z.enum(ARTICLE_UNITS);
 
 export const articleCreateSchema = z.object({
   idempotencyKey: z.string().uuid(),
@@ -28,6 +34,19 @@ export const articleCreateSchema = z.object({
 export const articleUpdateSchema = articleCreateSchema.partial().extend({
   id: z.string().uuid(),
   idempotencyKey: z.string().uuid(),
+});
+
+export const articleCsvRowSchema = z.object({
+  nome: z.string().min(1).max(200),
+  sku: z.string().min(1).max(50),
+  unidade: z.enum(ARTICLE_UNITS),
+  minStock: z.number().nonnegative().default(0),
+  reorderPoint: z.number().nonnegative().default(0),
+});
+
+export const articleImportCsvSchema = z.object({
+  idempotencyKey: z.string().uuid(),
+  rows: z.array(articleCsvRowSchema).min(1).max(500),
 });
 
 export const articleListSchema = paginationSchema.extend({
