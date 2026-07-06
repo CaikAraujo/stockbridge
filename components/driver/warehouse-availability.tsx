@@ -15,7 +15,7 @@ export function WarehouseAvailability() {
   );
 
   return (
-    <div style={{ flex: 1, overflow: 'auto', paddingBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ paddingBottom: 8, display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Campo de busca — pill */}
       <div style={{ background: '#FFF', borderRadius: 100, height: 50, display: 'flex', alignItems: 'center', gap: 10, padding: '0 18px', boxShadow: '0 4px 14px rgba(17,42,94,.06)' }}>
         <IconSearch size={18} color="#7A879C" style={{ flexShrink: 0 }} />

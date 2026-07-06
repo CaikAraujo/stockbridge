@@ -96,101 +96,103 @@ export function LoginForm({ sendMagicLink, initialError, callbackUrl }: LoginFor
     }
   }
 
-  const prefersReducedMotion =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const inputStyle: React.CSSProperties = {
+    height: 52,
+    border: '1.5px solid #E3E9F2',
+    borderRadius: 14,
+    padding: '0 16px',
+    font: '500 15px var(--font-driver)',
+    color: '#12203A',
+    background: '#FFFFFF',
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    font: '600 12px var(--font-driver)',
+    color: '#7A879C',
+    display: 'block',
+    marginBottom: 6,
+  };
 
   return (
-    <div className="login-card screen-enter">
+    <div
+      style={{
+        background: '#FFFFFF',
+        borderRadius: 22,
+        padding: '24px 20px',
+        boxShadow: '0 10px 30px rgba(17,42,94,.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+      }}
+    >
       {step === 'email' && (
         <>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Acesso ao sistema</h2>
-          <p style={{ color: 'var(--muted)', fontSize: 13.5, margin: '6px 0 24px' }}>
-            Informe seu e-mail para continuar.
-          </p>
+          <div style={{ font: '700 17px var(--font-driver)', color: '#12203A', letterSpacing: '-.01em' }}>
+            Entrar na sua conta
+          </div>
 
           {error && (
             <div
               style={{
-                marginBottom: 16,
                 padding: '12px 14px',
                 borderRadius: 10,
                 background: 'var(--danger-bg)',
                 color: 'var(--danger-ink)',
-                fontSize: 13,
-                fontWeight: 600,
+                font: '600 13px var(--font-driver)',
               }}
             >
               {error}
             </div>
           )}
 
-          <form onSubmit={handleEmailSubmit}>
-            <label
-              htmlFor="login-email"
-              style={{ fontSize: 12.5, fontWeight: 800, display: 'block', marginBottom: 7 }}
-            >
-              E-mail
-            </label>
-
-            <div className="field" style={{ height: 46, borderRadius: 12, marginBottom: 14 }}>
-              <svg
-                viewBox="0 0 24 24"
-                width={17}
-                height={17}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="3" y="5" width="18" height="14" rx="2.5" />
-                <path d="M3.5 7l8.5 6 8.5-6" />
-              </svg>
-              <input
-                id="login-email"
-                type="email"
-                name="email"
-                required
-                autoFocus
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  border: 0,
-                  outline: 0,
-                  background: 'transparent',
-                  flex: 1,
-                  minWidth: 0,
-                  fontSize: 13.5,
-                  color: 'var(--ink)',
-                  height: '100%',
-                }}
-              />
-            </div>
-
+          <form onSubmit={handleEmailSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label htmlFor="login-email" style={labelStyle}>E-mail</label>
+            <input
+              id="login-email"
+              type="email"
+              name="email"
+              required
+              autoFocus
+              placeholder="voce@vffroid.ch"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={inputStyle}
+            />
             <button
               type="submit"
-              className="btn btn-primary"
               disabled={loading}
-              style={{ width: '100%', height: 46, borderRadius: 12, fontSize: 14.5 }}
+              style={{
+                height: 56,
+                border: 'none',
+                borderRadius: 100,
+                background: '#1D5FE0',
+                color: '#FFFFFF',
+                font: '700 16px var(--font-driver)',
+                cursor: 'pointer',
+                boxShadow: '0 8px 22px rgba(29,95,224,.35)',
+                marginTop: 4,
+                opacity: loading ? 0.7 : 1,
+                transition: 'opacity .15s',
+              }}
             >
               {loading ? 'A verificar…' : 'Continuar'}
             </button>
           </form>
 
+          {/* Nota informativa */}
           <div
             style={{
               display: 'flex',
               gap: 10,
               alignItems: 'flex-start',
-              marginTop: 18,
               padding: '12px 14px',
               borderRadius: 12,
               background: 'var(--info-bg)',
               color: 'var(--info-ink)',
-              fontSize: 12.5,
-              fontWeight: 600,
+              font: '600 12.5px var(--font-driver)',
             }}
           >
             <svg
@@ -208,97 +210,73 @@ export function LoginForm({ sendMagicLink, initialError, callbackUrl }: LoginFor
               <rect x="5" y="11" width="14" height="9.5" rx="2" />
               <path d="M8 11V8a4 4 0 0 1 8 0v3" />
             </svg>
-            Admins e gestores recebem um link seguro por e-mail. Motoristas entram com senha.
+            Admins e gestores recebem link seguro. Motoristas entram com senha.
           </div>
         </>
       )}
 
       {step === 'password' && (
-        <div
-          style={{
-            animation: prefersReducedMotion ? 'none' : 'slideInRight 0.25s ease-out',
-          }}
-        >
+        <div>
+          {/* Botão voltar */}
           <button
             type="button"
-            onClick={() => {
-              setStep('email');
-              setPassword('');
-              setError(null);
-            }}
+            onClick={() => { setStep('email'); setPassword(''); setError(null); }}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
               background: 'none',
               border: 'none',
-              padding: '0 0 18px',
+              padding: '0 0 16px',
               cursor: 'pointer',
-              color: 'var(--muted)',
-              fontSize: 13,
-              fontWeight: 600,
+              color: '#7A879C',
+              font: '600 13px var(--font-driver)',
             }}
           >
-            <svg
-              viewBox="0 0 24 24"
-              width={14}
-              height={14}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
+            <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
             Voltar
           </button>
 
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Olá, {driverName}</h2>
-          <p style={{ color: 'var(--muted)', fontSize: 13.5, margin: '6px 0 24px' }}>
+          <div style={{ font: '700 17px var(--font-driver)', color: '#12203A', letterSpacing: '-.01em' }}>
+            Olá, {driverName}
+          </div>
+          <div style={{ font: '500 13px var(--font-driver)', color: '#7A879C', marginTop: 4, marginBottom: 16 }}>
             Introduza a sua senha para continuar.
-          </p>
+          </div>
 
           {error && (
             <div
               style={{
-                marginBottom: 16,
                 padding: '12px 14px',
                 borderRadius: 10,
                 background: 'var(--danger-bg)',
                 color: 'var(--danger-ink)',
-                fontSize: 13,
-                fontWeight: 600,
+                font: '600 13px var(--font-driver)',
+                marginBottom: 12,
               }}
             >
               {error}
             </div>
           )}
 
-          <form onSubmit={handlePasswordSubmit}>
-            <label
-              htmlFor="login-password"
-              style={{ fontSize: 12.5, fontWeight: 800, display: 'block', marginBottom: 7 }}
-            >
-              Senha
-            </label>
+          <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label htmlFor="login-password" style={labelStyle}>Senha</label>
 
-            <div className="field" style={{ height: 46, borderRadius: 12, marginBottom: 14 }}>
-              <svg
-                viewBox="0 0 24 24"
-                width={17}
-                height={17}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="5" y="11" width="14" height="9.5" rx="2" />
-                <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-              </svg>
+            {/* Wrapper do campo de senha com toggle */}
+            <div
+              style={{
+                height: 52,
+                border: '1.5px solid #E3E9F2',
+                borderRadius: 14,
+                padding: '0 12px 0 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: '#FFFFFF',
+              }}
+            >
               <input
                 id="login-password"
                 type={showPassword ? 'text' : 'password'}
@@ -309,58 +287,26 @@ export function LoginForm({ sendMagicLink, initialError, callbackUrl }: LoginFor
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 style={{
-                  border: 0,
-                  outline: 0,
-                  background: 'transparent',
-                  flex: 1,
-                  minWidth: 0,
-                  fontSize: 13.5,
-                  color: 'var(--ink)',
-                  height: '100%',
+                  border: 0, outline: 0, background: 'transparent',
+                  flex: 1, minWidth: 0,
+                  font: '500 15px var(--font-driver)',
+                  color: '#12203A',
                 }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '0 2px',
-                  cursor: 'pointer',
-                  color: 'var(--muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
+                style={{ background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer', color: '#A6B1C2', display: 'flex', alignItems: 'center' }}
               >
                 {showPassword ? (
-                  <svg
-                    viewBox="0 0 24 24"
-                    width={16}
-                    height={16}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.8}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
+                  <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
                     <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
                     <line x1="1" y1="1" x2="23" y2="23" />
                   </svg>
                 ) : (
-                  <svg
-                    viewBox="0 0 24 24"
-                    width={16}
-                    height={16}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.8}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
+                  <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                     <circle cx="12" cy="12" r="3" />
                   </svg>
@@ -370,9 +316,20 @@ export function LoginForm({ sendMagicLink, initialError, callbackUrl }: LoginFor
 
             <button
               type="submit"
-              className="btn btn-primary"
               disabled={loading || !password}
-              style={{ width: '100%', height: 46, borderRadius: 12, fontSize: 14.5 }}
+              style={{
+                height: 56,
+                border: 'none',
+                borderRadius: 100,
+                background: '#1D5FE0',
+                color: '#FFFFFF',
+                font: '700 16px var(--font-driver)',
+                cursor: 'pointer',
+                boxShadow: '0 8px 22px rgba(29,95,224,.35)',
+                marginTop: 4,
+                opacity: loading || !password ? 0.4 : 1,
+                transition: 'opacity .15s',
+              }}
             >
               {loading ? 'A entrar…' : 'Entrar'}
             </button>

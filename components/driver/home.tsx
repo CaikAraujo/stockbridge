@@ -45,13 +45,14 @@ export function DriverHome({ data, userName }: Props) {
   const initials = getInitials(userName);
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
       {/* Header — gradiente azul */}
       <div style={{
         background: 'linear-gradient(160deg,#1D5FE0,#1148B8)',
         padding: '22px 22px 58px',
         borderRadius: '0 0 28px 28px',
         flexShrink: 0,
+        width: '100%',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <span style={{ font: '800 15px var(--font-driver)', color: '#FFF', letterSpacing: '-.01em' }}>
@@ -86,12 +87,11 @@ export function DriverHome({ data, userName }: Props) {
         )}
       </div>
 
-      {/* Conteúdo sobreppondo o header */}
+      {/* Conteúdo sobrepondo o header */}
       <div style={{
         padding: '0 18px 88px',
         marginTop: -36,
         display: 'flex', flexDirection: 'column', gap: 16,
-        flex: 1, overflow: 'auto',
       }}>
         {/* Ações rápidas */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
