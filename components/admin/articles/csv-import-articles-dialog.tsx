@@ -13,6 +13,8 @@ type CsvRow = {
   unidade: string;
   minStock: number;
   reorderPoint: number;
+  costPriceCents?: number;
+  salePriceCents?: number;
 };
 
 type ValidatedRow = CsvRow & { valid: boolean; errors: string[] };
@@ -42,7 +44,7 @@ function parseCsv(text: string): ParseResult {
     const line = dataLines[i];
     if (!line) continue;
     const parts = line.split(',').map((p) => p.trim());
-    const [nome = '', sku = '', unidade = '', minStr = '0', repStr = '0'] = parts;
+    const [nome = '', sku = '', unidade = '', minStr = '0', repStr = '0', costStr, saleStr] = parts;
 
     if (parts.length < 3) {
       parseErrors.push(`Linha ${i + 2}: colunas insuficientes — esperado "nome,sku,unidade[,minStock,reorderPoint]"`);
@@ -62,18 +64,29 @@ function parseCsv(text: string): ParseResult {
     if (!Number.isNaN(minStock) && minStock < 0) rowErrors.push('minStock deve ser ≥ 0');
     if (!Number.isNaN(reorderPoint) && reorderPoint < 0) rowErrors.push('reorderPoint deve ser ≥ 0');
 
+    const costPriceCents =
+      costStr !== undefined && costStr !== '' ? parseInt(costStr, 10) : undefined;
+    const salePriceCents =
+      saleStr !== undefined && saleStr !== '' ? parseInt(saleStr, 10) : undefined;
+
     rows.push({
       nome,
       sku,
       unidade,
       minStock: Number.isNaN(minStock) ? 0 : minStock,
       reorderPoint: Number.isNaN(reorderPoint) ? 0 : reorderPoint,
+      ...(costPriceCents !== undefined && !Number.isNaN(costPriceCents) ? { costPriceCents } : {}),
+      ...(salePriceCents !== undefined && !Number.isNaN(salePriceCents) ? { salePriceCents } : {}),
       valid: rowErrors.length === 0,
       errors: rowErrors,
     });
   }
 
   return { rows, parseErrors };
+}
+
+function formatChf(cents: number): string {
+  return `CHF ${(cents / 100).toFixed(2)}`;
 }
 
 function generateUUID(): string {
@@ -132,6 +145,8 @@ export function CsvImportArticlesDialog({ onSuccess }: CsvImportArticlesDialogPr
         unidade: r.unidade as ArticleUnit,
         minStock: r.minStock,
         reorderPoint: r.reorderPoint,
+        ...(r.costPriceCents !== undefined ? { costPriceCents: r.costPriceCents } : {}),
+        ...(r.salePriceCents !== undefined ? { salePriceCents: r.salePriceCents } : {}),
       })),
     });
   }
@@ -148,6 +163,8 @@ export function CsvImportArticlesDialog({ onSuccess }: CsvImportArticlesDialogPr
 
   const validCount = parsed.rows.filter((r) => r.valid).length;
   const invalidCount = parsed.rows.filter((r) => !r.valid).length;
+  const hasCostPrice = parsed.rows.some((r) => r.costPriceCents !== undefined);
+  const hasSalePrice = parsed.rows.some((r) => r.salePriceCents !== undefined);
 
   return (
     <>
@@ -254,7 +271,16 @@ Deshydrateur DML 162,VF-002,un,5,2`}
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-surface-border bg-surface">
-                            {['#', 'Nome', 'SKU', 'Unidade', 'Min.', 'Rep.'].map((h) => (
+                            {[
+                              '#',
+                              'Nome',
+                              'SKU',
+                              'Unidade',
+                              'Min.',
+                              'Rep.',
+                              ...(hasCostPrice ? ['Preço compra'] : []),
+                              ...(hasSalePrice ? ['Preço venda'] : []),
+                            ].map((h) => (
                               <th
                                 key={h}
                                 className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-text-muted"
@@ -285,6 +311,20 @@ Deshydrateur DML 162,VF-002,un,5,2`}
                               <td className="px-3 py-2 text-text-secondary">{row.unidade}</td>
                               <td className="px-3 py-2 text-text-secondary">{row.minStock}</td>
                               <td className="px-3 py-2 text-text-secondary">{row.reorderPoint}</td>
+                              {hasCostPrice && (
+                                <td className="px-3 py-2 text-text-secondary">
+                                  {row.costPriceCents !== undefined
+                                    ? formatChf(row.costPriceCents)
+                                    : '—'}
+                                </td>
+                              )}
+                              {hasSalePrice && (
+                                <td className="px-3 py-2 text-text-secondary">
+                                  {row.salePriceCents !== undefined
+                                    ? formatChf(row.salePriceCents)
+                                    : '—'}
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>

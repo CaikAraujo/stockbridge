@@ -42,6 +42,8 @@ export const articleCsvRowSchema = z.object({
   unidade: z.enum(ARTICLE_UNITS),
   minStock: z.number().nonnegative().default(0),
   reorderPoint: z.number().nonnegative().default(0),
+  costPriceCents: z.number().int().min(0).optional(),
+  salePriceCents: z.number().int().min(0).optional(),
 });
 
 export const articleImportCsvSchema = z.object({

@@ -124,6 +124,8 @@ export const articlesRouter = router({
             minStock: row.minStock.toString(),
             reorderPoint: row.reorderPoint.toString(),
             active: true,
+            costPriceCents: row.costPriceCents ?? null,
+            salePriceCents: row.salePriceCents ?? null,
           });
         }
       }
