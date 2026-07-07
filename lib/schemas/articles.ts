@@ -51,6 +51,11 @@ export const articleImportCsvSchema = z.object({
   rows: z.array(articleCsvRowSchema).min(1).max(500),
 });
 
+export const articleListAllIdsSchema = z.object({
+  search: z.string().trim().min(1).max(50).optional(),
+  active: z.boolean().default(true),
+});
+
 export const articleListSchema = paginationSchema.extend({
   search: z.string().trim().min(1).max(50).optional(),
   categoryId: z.string().uuid().optional(),

@@ -1,11 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { and, count, eq, ilike, inArray } from 'drizzle-orm';
+import { and, count, eq, gt, ilike, inArray } from 'drizzle-orm';
 import { DatabaseError } from 'pg';
 import { z } from 'zod';
-import { articles } from '@/db/schema';
+import { articles, locations, stockLevels } from '@/db/schema';
 import {
   articleCreateSchema,
   articleImportCsvSchema,
+  articleListAllIdsSchema,
   articleListSchema,
   articleUpdateSchema,
 } from '@/lib/schemas/articles';
@@ -43,6 +44,44 @@ export const articlesRouter = router({
       limit,
       totalPages: Math.ceil((countRow?.total ?? 0) / limit),
     };
+  }),
+
+  listAllIds: protectedProcedure
+    .input(articleListAllIdsSchema)
+    .query(async ({ ctx, input }) => {
+      const { search, active } = input;
+      const escaped = search?.replace(/[\\%_]/g, (m) => `\\${m}`);
+      const where = and(
+        eq(articles.active, active),
+        escaped ? ilike(articles.name, `%${escaped}%`) : undefined,
+      );
+      const rows = await ctx.db
+        .select({ id: articles.id, sku: articles.sku, name: articles.name })
+        .from(articles)
+        .where(where)
+        .orderBy(articles.name, articles.id);
+      return {
+        ids: rows.map((r) => r.id),
+        items: rows,
+      };
+    }),
+
+  listWarehouseIds: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.db
+      .select({ id: articles.id, sku: articles.sku, name: articles.name })
+      .from(stockLevels)
+      .innerJoin(articles, eq(stockLevels.articleId, articles.id))
+      .innerJoin(locations, eq(stockLevels.locationId, locations.id))
+      .where(
+        and(
+          eq(locations.type, 'warehouse'),
+          eq(locations.active, true),
+          eq(articles.active, true),
+          gt(stockLevels.quantity, '0'),
+        ),
+      )
+      .orderBy(articles.name);
+    return { ids: rows.map((r) => r.id), items: rows };
   }),
 
   getById: protectedProcedure.input(idSchema).query(async ({ ctx, input }) => {
