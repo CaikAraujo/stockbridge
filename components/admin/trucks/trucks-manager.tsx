@@ -79,13 +79,19 @@ export function TrucksManager({ trucks, drivers }: { trucks: Truck[]; drivers: D
   }
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: 16,
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Link href="/trucks/new" className="btn btn-primary btn-sm">
+          <IconPlus size={14} /> Novo caminhão
+        </Link>
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: 16,
+        }}
+      >
       {trucks.map((t) => {
         const driverName = getAssignedName(t);
         const hasDriver  = !!driverName;
@@ -187,6 +193,7 @@ export function TrucksManager({ trucks, drivers }: { trucks: Truck[]; drivers: D
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
