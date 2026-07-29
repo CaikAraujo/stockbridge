@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { gasBottles, notifications, rapportImportItems, rapportImports } from '@/db/schema';
+import { decodeHtmlEntities } from '@/lib/utils';
 import { normalizeGasCode } from '@/server/routers/gas-bottles';
 import {
   extractArticles,
@@ -43,7 +44,7 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
         continue;
       }
 
-      const techName = extractTechnicianName(intervention);
+      const techName = decodeHtmlEntities(extractTechnicianName(intervention));
 
       // Tenta encontrar o caminhão do técnico pelo primeiro nome
       let locationId: string | null = null;
@@ -71,9 +72,9 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
           .insert(rapportImports)
           .values({
             interfastInterventionId: String(event.id),
-            interfastReference: event.reference,
+            interfastReference: event.reference ? decodeHtmlEntities(event.reference) : null,
             technicienName: techName || null,
-            clientName: event.client?.name ?? null,
+            clientName: event.client?.name ? decodeHtmlEntities(event.client.name) : null,
             locationId: locationId ?? undefined,
             interventionDate: intervention.finishDate
               ? new Date(intervention.finishDate).toISOString().split('T')[0]
@@ -90,15 +91,22 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
         }
 
         for (const article of rawArticles) {
-          const cleanName = stripHtml(article.name);
-          const matchedArticle = await matchArticle({ ...article, name: cleanName });
+          const cleanName = decodeHtmlEntities(article.name);
+          const cleanSupplierCode = article.supplierCode
+            ? decodeHtmlEntities(article.supplierCode)
+            : '';
+          const matchedArticle = await matchArticle({
+            ...article,
+            name: cleanName,
+            supplierCode: cleanSupplierCode,
+          });
           const priceCents = article.price ? parsePriceCents(article.price) : null;
 
           await tx.insert(rapportImportItems).values({
             rapportId: rapportImport.id,
             description: cleanName,
             interfastArticleId: article.articleId || null,
-            supplierCode: article.supplierCode || null,
+            supplierCode: cleanSupplierCode || null,
             quantity: String(article.quantity),
             unit: article.unit,
             priceCents: priceCents ?? undefined,
@@ -127,17 +135,6 @@ export async function processRecentInterventions(hoursBack = 2): Promise<Process
   }
 
   return result;
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .trim();
 }
 
 function normalizeName(s: string): string {
