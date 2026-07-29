@@ -571,6 +571,8 @@ export const rapportImportItems = pgTable(
     articleId: uuid('article_id').references(() => articles.id),
     movementId: uuid('movement_id').references(() => stockMovements.id),
     status: text('status').notNull().default('unmatched'),
+    // motivo legível quando status = 'needs_review'; null nos outros estados
+    reviewReason: text('review_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

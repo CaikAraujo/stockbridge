@@ -119,9 +119,16 @@ export const rapportsRouter = router({
       let confirmed = 0;
       let skipped = 0;
       const errors: string[] = [];
+      let hasNeedsReview = false;
 
       for (const item of rapport.items) {
         if (item.status === 'confirmed' || item.movementId) {
+          skipped++;
+          continue;
+        }
+        // needs_review: requer intervenção manual antes de poder ser deduzido.
+        if (item.status === 'needs_review') {
+          hasNeedsReview = true;
           skipped++;
           continue;
         }
@@ -154,7 +161,8 @@ export const rapportsRouter = router({
         }
       }
 
-      const finalStatus = errors.length > 0 ? 'partial' : 'confirmed';
+      const finalStatus =
+        errors.length > 0 || hasNeedsReview ? 'partial' : 'confirmed';
 
       await ctx.db
         .update(rapportImports)
