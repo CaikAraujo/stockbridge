@@ -1,6 +1,6 @@
 'use client';
 
-import { IconBuildingWarehouse, IconEdit, IconPackage, IconPlus, IconPrinter, IconSearch, IconTrash } from '@tabler/icons-react';
+import { IconBuildingWarehouse, IconEdit, IconPackage, IconPlus, IconPrinter, IconSearch, IconTrash, IconTruck } from '@tabler/icons-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -11,6 +11,7 @@ import { CsvImportArticlesDialog } from '@/components/admin/articles/csv-import-
 import { EmptyState } from '@/components/admin/shared/empty-state';
 import { SbTable } from '@/components/admin/shared/sb-table';
 import { StateBadge } from '@/components/admin/shared/state-badge';
+import { BulkAssignSupplierModal } from './bulk-assign-supplier-modal';
 
 type Article = {
   id: string;
@@ -39,6 +40,7 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
   const [printing, setPrinting] = useState(false);
   const [selectingAll, setSelectingAll] = useState(false);
   const [allPrintItems, setAllPrintItems] = useState<PrintItem[] | null>(null);
+  const [bulkSupplierOpen, setBulkSupplierOpen] = useState(false);
   const [displayData, setDisplayData] = useState<ArticlesListResult>(initialData);
   const checkboxRef = useRef<HTMLInputElement>(null);
 
@@ -200,6 +202,16 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
               {printing ? 'Gerando…' : `Imprimir etiquetas (${selected.size})`}
             </button>
           )}
+          {selected.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setBulkSupplierOpen(true)}
+              className="btn btn-soft btn-sm"
+            >
+              <IconTruck size={14} />
+              Associer fournisseur ({selected.size})
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>
@@ -317,6 +329,18 @@ export function ArticlesTable({ initialData }: { initialData: ArticlesListResult
           return null;
         }}
       />
+
+      {bulkSupplierOpen && (
+        <BulkAssignSupplierModal
+          selectedIds={[...selected]}
+          onClose={() => setBulkSupplierOpen(false)}
+          onSuccess={() => {
+            setBulkSupplierOpen(false);
+            setSelected(new Set());
+            router.refresh();
+          }}
+        />
+      )}
 
       {totalPages > 1 && (
         <div

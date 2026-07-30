@@ -134,11 +134,14 @@ export const categories = pgTable('categories', {
 export const suppliers = pgTable('suppliers', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
-  contact: text('contact'),
+  contactName: text('contact_name'),
   phone: text('phone'),
   email: text('email'),
+  address: text('address'),
+  notes: text('notes'),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ============================================================
@@ -673,9 +676,76 @@ export const companySettings = pgTable('company_settings', {
   contactEmail: text('contact_email'),
   logoUrl: text('logo_url'),
   onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+  emailTemplateSubject: text('email_template_subject')
+    .notNull()
+    .default('Demande de commande - {reference}'),
+  emailTemplateGreeting: text('email_template_greeting')
+    .notNull()
+    .default('Bonjour {contactName},'),
+  emailTemplateBody: text('email_template_body')
+    .notNull()
+    .default('Nous souhaitons vous adresser la commande suivante :'),
+  emailTemplateFooter: text('email_template_footer')
+    .notNull()
+    .default(
+      'Nous restons à votre disposition pour tout renseignement complémentaire.\n\nCordialement,\n{companyName}',
+    ),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ============================================================
+// PURCHASE ORDERS (pedidos de compra aos fornecedores)
+// ============================================================
+
+export const purchaseOrders = pgTable(
+  'purchase_orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    reference: text('reference').notNull().unique(), // CMD-YYYYMMDD-XXX
+    supplierId: uuid('supplier_id')
+      .notNull()
+      .references(() => suppliers.id, { onDelete: 'restrict' }),
+    status: text('status', {
+      enum: ['ready_to_send', 'sent', 'confirmed', 'received', 'cancelled'],
+    })
+      .notNull()
+      .default('ready_to_send'),
+    emailSubject: text('email_subject').notNull(),
+    emailBody: text('email_body').notNull(),
+    message: text('message'),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    supplierStatusIdx: index('po_supplier_status_idx').on(t.supplierId, t.status),
+    statusCreatedAtIdx: index('po_status_created_at_idx').on(t.status, t.createdAt.desc()),
+  }),
+);
+
+export const purchaseOrderItems = pgTable(
+  'purchase_order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    purchaseOrderId: uuid('purchase_order_id')
+      .notNull()
+      .references(() => purchaseOrders.id, { onDelete: 'cascade' }),
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'restrict' }),
+    quantity: numeric('quantity', { precision: 14, scale: 3 }).notNull(),
+    unitCostSnapshot: numeric('unit_cost_snapshot', { precision: 14, scale: 2 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    orderIdx: index('poi_order_idx').on(t.purchaseOrderId),
+    articleIdx: index('poi_article_idx').on(t.articleId),
+  }),
+);
 
 // ============================================================
 // NOTAS PARA A MIGRATION (executar via SQL raw após `pnpm db:generate`)

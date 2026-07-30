@@ -7,7 +7,9 @@ import {
   IconFileText,
   IconLayoutDashboard,
   IconLogout,
+  IconPackageImport,
   IconShield,
+  IconShoppingCart,
   IconTransfer,
   IconTruck,
 } from '@tabler/icons-react';
@@ -34,7 +36,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Estoque',
     items: [
-      { href: '/estoque',     label: 'Estoque',         icon: IconBuildingWarehouse },
+      { href: '/estoque',          label: 'Estoque',              icon: IconBuildingWarehouse },
+      { href: '/restock',          label: 'Réapprovisionnement',  icon: IconPackageImport     },
+      { href: '/purchase-orders',  label: 'Commandes',            icon: IconShoppingCart      },
     ],
   },
   {

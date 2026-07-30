@@ -36,6 +36,7 @@ type ArticleFormProps = {
     minStock: string;
     reorderPoint: string;
     refrigerantType?: string | null;
+    supplierId?: string | null;
   };
 };
 
@@ -54,6 +55,9 @@ export function ArticleForm({ mode, articleId, initial }: ArticleFormProps) {
   const create = api.articles.create.useMutation();
   const update = api.articles.update.useMutation();
 
+  const { data: suppliersData } = api.suppliers.listActive.useQuery();
+  const activeSuppliers = suppliersData ?? [];
+
   const [form, setForm] = useState({
     sku: initial?.sku ?? '',
     name: initial?.name ?? '',
@@ -65,6 +69,7 @@ export function ArticleForm({ mode, articleId, initial }: ArticleFormProps) {
     minStock: initial?.minStock ?? '0',
     reorderPoint: initial?.reorderPoint ?? '0',
     refrigerantType: initial?.refrigerantType ?? '',
+    supplierId: initial?.supplierId ?? '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -89,6 +94,7 @@ export function ArticleForm({ mode, articleId, initial }: ArticleFormProps) {
         minStock: form.minStock || '0',
         reorderPoint: form.reorderPoint || '0',
         refrigerantType: form.refrigerantType || undefined,
+        supplierId: form.supplierId || undefined,
         idempotencyKey: uuidv4(),
       };
 
@@ -176,6 +182,24 @@ export function ArticleForm({ mode, articleId, initial }: ArticleFormProps) {
         )}
         {field('refrigerantType', 'Tipo de gás', input('refrigerantType', 'R-410A, R-32...'))}
       </div>
+
+      {field(
+        'supplierId',
+        'Fournisseur',
+        <select
+          id="supplierId"
+          value={form.supplierId}
+          onChange={set('supplierId')}
+          className="w-full rounded-btn border border-surface-border bg-white px-3 py-2.5 text-sm text-text-primary focus:border-brand-500 focus:outline-none"
+        >
+          <option value="">Aucun fournisseur</option>
+          {activeSuppliers.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>,
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         {field('costPrice', 'Preço de custo (R$)', input('costPrice', '0,00'))}

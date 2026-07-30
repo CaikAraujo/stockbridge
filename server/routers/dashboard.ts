@@ -1,15 +1,38 @@
-import { and, count, eq, gt, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, count, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { articles, locations, stockLevels, stockMovements, transfers, users } from '@/db/schema';
 import { idSchema } from '@/lib/schemas/common';
 import { managerProcedure, protectedProcedure } from '@/server/procedures';
 import { router } from '@/server/trpc';
+
+/**
+ * Conta artigos críticos no depósito (quantity <= minStock).
+ * Partilhado com purchaseOrders.getCriticalCount — não duplicar.
+ */
+export async function countCriticalArticles(
+  db: Parameters<Parameters<typeof protectedProcedure.query>[0]>[0]['ctx']['db'],
+): Promise<number> {
+  const result = await db.execute<{ total: string }>(sql`
+    SELECT COUNT(*) AS total
+    FROM articles a
+    LEFT JOIN stock_levels sl
+      ON sl.article_id = a.id
+      AND sl.location_id = (
+        SELECT id FROM locations WHERE type = 'warehouse' AND active = true LIMIT 1
+      )
+    WHERE a.active = true
+      AND COALESCE(sl.quantity, 0) <= a.min_stock
+      AND a.min_stock > 0
+  `);
+  const row = result.rows[0];
+  return Number(row?.total ?? 0);
+}
 
 export const dashboardRouter = router({
   getStats: protectedProcedure.query(async ({ ctx }) => {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [movementsToday, transfersInTransit, lowStockAlerts] = await Promise.all([
+    const [movementsToday, transfersInTransit, criticalCount] = await Promise.all([
       ctx.db
         .select({ total: count() })
         .from(stockMovements)
@@ -23,19 +46,13 @@ export const dashboardRouter = router({
 
       ctx.db.select({ total: count() }).from(transfers).where(eq(transfers.status, 'in_transit')),
 
-      ctx.db
-        .select({ total: count() })
-        .from(stockLevels)
-        .innerJoin(articles, eq(stockLevels.articleId, articles.id))
-        .where(
-          and(lte(stockLevels.quantity, articles.reorderPoint), gt(stockLevels.quantity, '0')),
-        ),
+      countCriticalArticles(ctx.db),
     ]);
 
     return {
       movementsToday: movementsToday[0]?.total ?? 0,
       transfersInTransit: transfersInTransit[0]?.total ?? 0,
-      lowStockAlerts: lowStockAlerts[0]?.total ?? 0,
+      lowStockAlerts: criticalCount,
     };
   }),
 

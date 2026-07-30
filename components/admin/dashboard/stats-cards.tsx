@@ -5,6 +5,7 @@ import {
   IconTransfer,
   IconTruck,
 } from '@tabler/icons-react';
+import Link from 'next/link';
 import type { ComponentType } from 'react';
 import { Sparkline } from './sparkline';
 
@@ -33,9 +34,10 @@ interface KpiConfig {
   hue: string;
   sparkData: number[];
   sparkColor: string;
+  href?: string;
 }
 
-function KpiCard({ label, value, delta, tone, icon: Icon, hue, sparkData, sparkColor }: KpiConfig) {
+function KpiCard({ label, value, delta, tone, icon: Icon, hue, sparkData, sparkColor, href }: KpiConfig) {
   const deltaColor =
     tone === 'down'
       ? 'var(--danger-ink)'
@@ -45,9 +47,9 @@ function KpiCard({ label, value, delta, tone, icon: Icon, hue, sparkData, sparkC
 
   const iconBg = `color-mix(in oklch, ${hue} 11%, white)`;
 
-  return (
+  const inner = (
     <div
-      className="card card-hover"
+      className={`card${href ? ' card-hover' : ''}`}
       style={{ padding: 'var(--card-pad)', display: 'flex', flexDirection: 'column', gap: 10 }}
     >
       {/* Header row: label + icon */}
@@ -106,6 +108,15 @@ function KpiCard({ label, value, delta, tone, icon: Icon, hue, sparkData, sparkC
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+        {inner}
+      </Link>
+    );
+  }
+  return inner;
 }
 
 export function StatsCards({
@@ -144,14 +155,15 @@ export function StatsCards({
       sparkColor: 'oklch(0.55 0.19 295)',
     },
     {
-      label: 'Alertas de estoque',
+      label: 'Articles critiques',
       value: stats.lowStockAlerts,
-      delta: stats.lowStockAlerts > 0 ? 'Itens abaixo do mínimo' : 'Todos os artigos saudáveis',
+      delta: stats.lowStockAlerts > 0 ? 'Itens abaixo do mínimo' : 'Tous les stocks sont OK',
       tone: stats.lowStockAlerts > 0 ? 'down' : 'flat',
       icon: IconAlertTriangle,
       hue: stats.lowStockAlerts > 0 ? 'var(--danger)' : 'var(--success)',
       sparkData: sparkAlerts,
       sparkColor: 'var(--danger)',
+      href: '/restock',
     },
     {
       label: 'Itens em caminhões',

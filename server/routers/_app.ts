@@ -8,7 +8,9 @@ import { gasBottlesRouter } from './gas-bottles';
 import { locationsRouter } from './locations';
 import { movementsRouter } from './movements';
 import { notificationsRouter } from './notifications';
+import { purchaseOrdersRouter } from './purchase-orders';
 import { rapportsRouter } from './rapports';
+import { suppliersRouter } from './suppliers';
 import { totpRouter } from './totp';
 import { usersRouter } from './users';
 
@@ -22,7 +24,9 @@ export const appRouter = router({
   drivers: driversRouter,
   gasBottles: gasBottlesRouter,
   notifications: notificationsRouter,
+  purchaseOrders: purchaseOrdersRouter,
   rapports: rapportsRouter,
+  suppliers: suppliersRouter,
   totp: totpRouter,
   users: usersRouter,
 });
