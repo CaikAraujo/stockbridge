@@ -12,6 +12,7 @@ import {
   IconShoppingCart,
   IconTransfer,
   IconTruck,
+  IconUsers,
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -51,8 +52,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Sistema',
     items: [
-      { href: '/admin',              label: 'Administração', icon: IconShield },
-      { href: '/notifications',      label: 'Notificações',  icon: IconBell  },
+      { href: '/admin',                   label: 'Administração', icon: IconShield },
+      { href: '/settings/suppliers',      label: 'Fournisseurs',  icon: IconUsers  },
+      { href: '/notifications',           label: 'Notificações',  icon: IconBell   },
     ],
   },
 ];
